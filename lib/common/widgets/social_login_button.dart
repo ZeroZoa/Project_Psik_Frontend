@@ -30,14 +30,6 @@ class SocialLoginButton extends StatelessWidget {
           border: hasBorder
               ? Border.all(color: Colors.grey.shade300, width: 1)
               : null,
-          boxShadow: [
-            // 살짝 그림자 주면 더 버튼 같습니다 (선택 사항)
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         padding: EdgeInsets.all(padding),
         child: SvgPicture.asset(
