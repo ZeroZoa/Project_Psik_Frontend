@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
 import '../../../../common/widgets/social_login_button.dart';
-import '../../data/services/auth_service.dart'; // AuthService 위치에 맞게 수정해주세요
+import '../../data/services/auth_service.dart';
+import '../providers/auth_provider.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
-  // 공통 로그인 처리 핸들러
+  // [수정] AuthProvider.login()을 통해 로그인 처리
+  // AuthProvider가 isAuthenticated를 true로 바꾸면, GoRouter refreshListenable이 감지하여 /home으로 이동
   Future<void> _handleLogin(BuildContext context, Future<bool> Function() loginMethod) async {
-    //서비스 로직 실행
-    final isSuccess = await loginMethod();
+    final authProvider = context.read<AuthProvider>();
 
-    //비동기 갭(Async Gap) 방지: 로직 수행 동안 화면이 닫혔는지 체크
+    await authProvider.login(loginMethod);
+
     if (!context.mounted) return;
 
-    //결과에 따른 UI 처리
-    if (isSuccess) {
-      Navigator.of(context).pushReplacementNamed('/home');
-    } else {
-      // 실패 시: 스낵바 알림
+    // 로그인 실패 시에만 스낵바 표시 (성공 시 GoRouter redirect가 자동으로 /home 이동)
+    if (!authProvider.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('로그인에 실패했습니다. 다시 시도해 주세요.'),
@@ -72,7 +72,7 @@ class LoginScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      //카카오 로그인 버튼
+                      // 카카오 로그인 버튼
                       SocialLoginButton(
                         assetPath: 'assets/images/kakao_login.svg',
                         backgroundColor: const Color(0xFFFEE500), // 카카오 노랑
@@ -82,7 +82,7 @@ class LoginScreen extends StatelessWidget {
 
                       const SizedBox(width: 12),
 
-                      //구글 로그인 버튼
+                      // 구글 로그인 버튼
                       SocialLoginButton(
                         assetPath: 'assets/images/google_login.svg',
                         backgroundColor: Colors.white,

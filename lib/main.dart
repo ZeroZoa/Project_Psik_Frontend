@@ -1,41 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // [필수] 저장소
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
+
+// [Router]
 import 'core/router/app_router.dart';
 
 // [Common]
 import 'common/theme/app_colors.dart';
-import 'core/network/auth_interceptor.dart'; // [필수] 인터셉터
+import 'core/network/auth_interceptor.dart';
 
-// [Feature] - 경로가 view 하위로 변경됨을 반영
-import 'features/auth/data/auth_repository.dart';
-//import 'features/auth/presentation/view/login_screen.dart';
-
-
+// [Feature]
+import 'features/auth/data/repositories/auth_repository.dart';
+import 'features/auth/presentation/providers/auth_provider.dart';
+import 'features/home/data/repositories/cosmetics_repository.dart';
+import 'features/diary/data/repositories/skin_diary_repository.dart';
+import 'features/diary/presentation/providers/skin_diary_provider.dart';
+import 'features/community/data/repositories/community_repository.dart';
+import 'features/community/presentation/providers/community_provider.dart';
 
 void main() async {
-  //엔진 초기화
+  // 엔진 초기화
   WidgetsFlutterBinding.ensureInitialized();
 
-  //환경변수 로드
+  usePathUrlStrategy();
+
+  // 환경변수 로드
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
     debugPrint("Warning: .env file not found. Using default values.");
   }
 
-  //보안 저장소
+  // 보안 저장소 설정
   const storage = FlutterSecureStorage(
     aOptions: AndroidOptions(
-      // 암호화 키가 깨졌을 때(앱 재설치 등) 데이터를 초기화하여 크래시 방지
       resetOnError: true,
     ),
   );
 
-  //네트워크 Dio 설정
+  // 네트워크(Dio) 설정
   final baseUrl = dotenv.env['API_URL'] ?? 'http://localhost:8080';
 
   final dio = Dio(BaseOptions(
@@ -43,77 +51,121 @@ void main() async {
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 3),
     headers: {
-      'Content-Type': 'application/json',
+      // JSON 요청: 자동으로 application/json
       'Accept': 'application/json',
     },
   ));
 
-  //인터셉터에 (storage, dio) 두 개를 전달
-  dio.interceptors.add(AuthInterceptor(storage, dio));
+  // [수정된 부분] 인터셉터 초기화 및 등록
+  // 1. 인스턴스 생성
+  final authInterceptor = AuthInterceptor(storage, dio);
 
-  //앱 실행
+  // 2. [중요] 저장소의 토큰을 메모리(변수)로 로드 (비동기)
+  // 이걸 해줘야 API 호출 때마다 디스크를 읽지 않아서 속도가 빠릅니다.
+  await authInterceptor.init();
+
+  // 3. Dio에 등록
+  dio.interceptors.add(authInterceptor);
+
+
+  // 인스턴스 미리 생성
+  // (AuthInterceptor가 적용된 dio를 사용하므로, 토큰이 자동 주입됨)
+  final cosmeticsRepository = CosmeticsRepository(dio);
+  final skinDiaryRepository = SkinDiaryRepository(dio);
+  // [수정] main에서 생성한 storage를 AuthProvider에도 주입하여 인스턴스 통일
+  final authProvider = AuthProvider(storage: storage);
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
+
         Provider<AuthRepository>(
           create: (_) => AuthRepository(dio, storage),
         ),
+
+        Provider<CosmeticsRepository>.value(value: cosmeticsRepository),
+
+        //다이어리 Repository + Provider 등록
+        Provider<SkinDiaryRepository>.value(value: skinDiaryRepository),
+
+        Provider<CommunityRepository>(
+          create: (_) => CommunityRepository(dio),
+        ),
+
+        ChangeNotifierProvider<CommunityProvider>(
+          create: (_) => CommunityProvider(CommunityRepository(dio)),
+        ),
+
+        ChangeNotifierProvider<SkinDiaryProvider>(
+          create: (_) => SkinDiaryProvider(skinDiaryRepository),
+        ),
       ],
-      child: const SkinnerApp(),
+      child: SkinnerApp(authProvider: authProvider),
     ),
   );
 }
 
-class SkinnerApp extends StatelessWidget {
-  const SkinnerApp({super.key});
+// ... 아래 SkinnerApp 클래스 등은 기존과 동일합니다 ...
+class SkinnerApp extends StatefulWidget {
+  final AuthProvider authProvider;
+
+  const SkinnerApp({super.key, required this.authProvider});
+
+  @override
+  State<SkinnerApp> createState() => _SkinnerAppState();
+}
+
+class _SkinnerAppState extends State<SkinnerApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    // 앱 시작 시 로그인 상태 체크
+    widget.authProvider.checkLoginStatus();
+
+    // 라우터 설정
+    _router = AppRouter.router(widget.authProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Psik',
       debugShowCheckedModeBanner: false,
-
-      //테마 설정
       theme: ThemeData(
         useMaterial3: true,
         fontFamily: 'Pretender',
-
-        // 배경색
         scaffoldBackgroundColor: AppColors.background,
-
-        // 색상 체계 (ColorScheme)
         colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primary, // 형광 라임
+          seedColor: AppColors.primary,
           primary: AppColors.primary,
-          secondary: AppColors.secondary, // 진한 남색
+          secondary: AppColors.secondary,
           surface: AppColors.surface,
           error: AppColors.error,
           brightness: Brightness.light,
         ),
-
-        // 앱바 테마
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.surface,
           elevation: 0,
           scrolledUnderElevation: 0,
           centerTitle: true,
           titleTextStyle: TextStyle(
-            color: AppColors.textTitle, // 진한 남색
+            color: AppColors.textTitle,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
           iconTheme: IconThemeData(color: AppColors.textTitle),
         ),
-
-        // 버튼 테마 (형광 라임 배경 + 남색 글씨)
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
-            foregroundColor: AppColors.secondary, // 가독성: 남색
+            foregroundColor: AppColors.secondary,
             elevation: 0,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16), // 라운딩 통일 (16px)
+              borderRadius: BorderRadius.circular(16),
             ),
             textStyle: const TextStyle(
               fontWeight: FontWeight.bold,
@@ -121,30 +173,23 @@ class SkinnerApp extends StatelessWidget {
             ),
           ),
         ),
-
-        // 입력창 테마 (CustomTextField와 스타일 일치)
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: AppColors.surface,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           hintStyle: const TextStyle(color: AppColors.textSub1, fontSize: 14),
-
           border: _outlineBorder(AppColors.inputBorder),
           enabledBorder: _outlineBorder(AppColors.inputBorder),
-          // 포커스 시 형광 라임색 테두리
           focusedBorder: _outlineBorder(AppColors.primary, width: 2),
           errorBorder: _outlineBorder(AppColors.error),
           focusedErrorBorder: _outlineBorder(AppColors.error, width: 2),
         ),
-
-        // 커서 색상
         textSelectionTheme: const TextSelectionThemeData(
           cursorColor: AppColors.primary,
           selectionHandleColor: AppColors.primary,
         ),
       ),
-
-      // 한국어 지원
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -154,13 +199,10 @@ class SkinnerApp extends StatelessWidget {
         Locale('ko', 'KR'),
         Locale('en', 'US'),
       ],
-
-      //라우팅
-      routerConfig: AppRouter.router,
+      routerConfig: _router,
     );
   }
 
-  // 테두리 스타일 헬퍼 (중복 제거)
   OutlineInputBorder _outlineBorder(Color color, {double width = 1.0}) {
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),

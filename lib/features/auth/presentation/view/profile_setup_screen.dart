@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:skinner_frontend/features/auth/domain/enum/skin_type.dart';
+import '../../../../common/theme/app_colors.dart';
+import '../../domain/enums/skin_type.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -131,7 +132,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             if (selected) _selectedSkinType = type;
                           });
                         },
-                        selectedColor: Colors.blueAccent,
+                        selectedColor: AppColors.primary,
                         backgroundColor: Colors.grey[100],
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         shape: RoundedRectangleBorder(
@@ -153,8 +154,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _submitProfile,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        disabledBackgroundColor: Colors.blueAccent.withOpacity(0.6),
+                        backgroundColor: AppColors.primary,
+                        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),

@@ -1,20 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-class AuthResponse {
-  final String accessToken;
-  final String refreshToken;
-
-  AuthResponse({required this.accessToken, required this.refreshToken});
-
-  factory AuthResponse.fromJson(Map<String, dynamic> json) {
-    return AuthResponse(
-      // Spring에서 null을 보낼 수도 있으므로 빈 문자열로 방어 코드 작성
-      accessToken: json['accessToken'] ?? '',
-      refreshToken: json['refreshToken'] ?? '',
-    );
-  }
-}
+import '../models/auth_response_model.dart';
 
 class AuthRepository {
   final Dio _dio;
@@ -38,8 +24,8 @@ class AuthRepository {
       final authResponse = AuthResponse.fromJson(response.data);
 
       // 2. [핵심] 토큰을 내부 저장소에 안전하게 저장 (앱 꺼도 유지됨)
-      await _storage.write(key: 'ACCESS_TOKEN', value: authResponse.accessToken);
-      await _storage.write(key: 'REFRESH_TOKEN', value: authResponse.refreshToken);
+      await _storage.write(key: 'accessToken', value: authResponse.accessToken);
+      await _storage.write(key: 'refreshToken', value: authResponse.refreshToken);
 
     } on DioException catch (e) {
       // 3. 에러 핸들링 세분화

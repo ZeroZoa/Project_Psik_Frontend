@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart'; // kIsWeb
 import 'package:flutter/services.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -5,100 +6,81 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 
 class AuthService {
-  //싱글톤 패턴 (Singleton Pattern) - 엄격한 구현
-
-  //클래스 로드 시점에 단 하나의 인스턴스를 생성
   static final AuthService _instance = AuthService._internal();
+  factory AuthService() => _instance;
 
-  //외부에서는 이 factory 생성자를 통해 언제나 _instance에 접근
-  factory AuthService() {
-    return _instance;
-  }
-
-  //내부 전용 프라이빗 생성자
   AuthService._internal()
       : _storage = const FlutterSecureStorage(),
         _logger = Logger();
 
-
-  static const String _accessTokenKey = 'accessToken';
-  static const String _refreshTokenKey = 'refreshToken';
-
   final FlutterSecureStorage _storage;
   final Logger _logger;
 
-  String get _baseUrl => dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8080';
-  String get _callbackScheme => dotenv.env['CALLBACK_SCHEME'] ?? 'psik';
+  // [수정] Web 개발 시 localhost 사용 (에뮬레이터는 10.0.2.2)
+  String get _baseUrl => dotenv.env['API_BASE_URL'] ?? (kIsWeb ? 'http://localhost:8080' : 'http://10.0.2.2:8080');
+
+  // [수정] Web에서는 'http' 스킴 사용
+  String get _callbackScheme => kIsWeb ? 'http' : (dotenv.env['CALLBACK_SCHEME'] ?? 'psik');
 
   // 카카오 로그인
-    Future<bool> loginWithKakao() async {
+  Future<bool> loginWithKakao() async {
     final url = Uri.parse('$_baseUrl/oauth2/authorization/kakao');
-
-    try {
-      final result = await FlutterWebAuth2.authenticate(
-        url: url.toString(),
-        callbackUrlScheme: _callbackScheme,
-        options: const FlutterWebAuth2Options(
-          windowName: '_blank',
-        ),
-      );
-
-      return await _handleAuthResult(result, 'Kakao');
-
-    } on PlatformException catch (e) {
-      _logger.i("[Kakao] 사용자 로그인 취소: ${e.code} - ${e.message}");
-      return false;
-    } catch (e) {
-      _logger.e("[Kakao] 예상치 못한 로그인 오류", error: e);
-      return false;
-    }
+    return await _authenticate(url, 'Kakao');
   }
 
   // 구글 로그인
   Future<bool> loginWithGoogle() async {
     final url = Uri.parse('$_baseUrl/oauth2/authorization/google');
+    return await _authenticate(url, 'Google');
+  }
 
+  // 공통 인증 로직
+  Future<bool> _authenticate(Uri url, String provider) async {
     try {
       final result = await FlutterWebAuth2.authenticate(
         url: url.toString(),
         callbackUrlScheme: _callbackScheme,
         options: const FlutterWebAuth2Options(
-          windowName: '_blank',
+          windowName: '_blank', // 웹에서 새 탭으로 열기
         ),
       );
 
-      return await _handleAuthResult(result, 'Google');
+      return await _handleAuthResult(result, provider);
 
     } on PlatformException catch (e) {
-      _logger.i("[Google] 사용자 로그인 취소: ${e.code} - ${e.message}");
+      _logger.i("[$provider] 사용자 로그인 취소: ${e.code}");
       return false;
     } catch (e) {
-      _logger.e("[Google] 예상치 못한 로그인 오류", error: e);
+      _logger.e("[$provider] 로그인 오류", error: e);
       return false;
     }
   }
 
-  // [Private] 토큰 파싱 및 저장 로직
+  // [핵심 로직] 토큰 파싱 및 저장
   Future<bool> _handleAuthResult(String resultUrl, String provider) async {
     try {
       final uri = Uri.parse(resultUrl);
-      final accessToken = uri.queryParameters[_accessTokenKey];
-      final refreshToken = uri.queryParameters[_refreshTokenKey];
+      final accessToken = uri.queryParameters['accessToken'];
+      final refreshToken = uri.queryParameters['refreshToken']; // 'COOKIE' 값으로 들어옴
 
-      if (accessToken == null || refreshToken == null) {
-        _logger.e("[$provider] 토큰 미발급 (URL 파싱 실패). Result: $resultUrl");
+      if (accessToken == null) {
+        _logger.e("[$provider] Access Token 없음");
         return false;
       }
 
-      await Future.wait([
-        _storage.write(key: _accessTokenKey, value: accessToken),
-        _storage.write(key: _refreshTokenKey, value: refreshToken),
-      ]);
+      // 1. Access Token 저장
+      await _storage.write(key: 'accessToken', value: accessToken);
 
-      _logger.i("[$provider] 로그인 성공 및 토큰 저장 완료");
+      // 2. Refresh Token 저장 (앱일 때만)
+      // 웹은 쿠키에 있으므로 'COOKIE' 값으로 들어오면 저장을 건너뜁니다.
+      if (!kIsWeb && refreshToken != null && refreshToken != 'COOKIE') {
+        await _storage.write(key: 'refreshToken', value: refreshToken);
+      }
+
+      _logger.i("[$provider] 로그인 성공 (Web Mode)");
       return true;
     } catch (e) {
-      _logger.e("[$provider] 토큰 저장 중 디스크/시스템 오류", error: e);
+      _logger.e("[$provider] 에러 발생", error: e);
       return false;
     }
   }
