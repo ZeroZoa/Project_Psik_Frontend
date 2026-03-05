@@ -21,7 +21,7 @@ class CommunityRepository {
     try {
       final response = await _dio.get(
         '/api/posts',
-        queryParameters: {'sort': sort, 'page': page, 'size': size},
+        queryParameters: {'sortBy': sort, 'page': page, 'size': size},
       );
       final List<dynamic> content = response.data['content'];
       return content.map((json) => PostModel.fromJson(json)).toList();

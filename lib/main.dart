@@ -51,9 +51,11 @@ void main() async {
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 3),
     headers: {
-      // JSON 요청: 자동으로 application/json
       'Accept': 'application/json',
     },
+    // 웹에서 cross-origin 요청 시 쿠키(HttpOnly 포함)를 전송하도록 설정
+    // 이게 없으면 브라우저가 localhost:8080의 쿠키를 localhost:3000 요청에 안 붙임
+    extra: {'withCredentials': true},
   ));
 
   // [수정된 부분] 인터셉터 초기화 및 등록
