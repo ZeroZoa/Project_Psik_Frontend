@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
+import '../../../../common/widgets/login_modal.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/skin_diary_request.dart';
 import '../providers/skin_diary_provider.dart';
 
@@ -14,27 +16,25 @@ class SkinDiaryScreen extends StatefulWidget {
 }
 
 class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
-  // [State] 날짜 선택 상태 (기본값: 오늘)
   DateTime _selectedDate = DateTime.now();
 
-  // [#1] 디폴트값 전부 0으로 변경
   double _sleepHours = 0.0;
   double _waterLiters = 0.0;
   final TextEditingController _dietController = TextEditingController();
   final List<int> _selectedProductIds = [];
   int _skinScore = 0;
 
-  // [#3] 날짜 전환 애니메이션 방향 추적
-  // true = 오른쪽→왼쪽(미래로), false = 왼쪽→오른쪽(과거로)
   bool _slideForward = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // 화면 진입 시 오늘 날짜의 다이어리 + 이번 달 기록 날짜 조회
-      _loadDiaryForDate(_selectedDate);
-      _loadMonthlyRecords(_selectedDate);
+      final isAuthenticated = context.read<AuthProvider>().isAuthenticated;
+      if (isAuthenticated) {
+        _loadDiaryForDate(_selectedDate);
+        _loadMonthlyRecords(_selectedDate);
+      }
     });
   }
 
@@ -44,13 +44,11 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
     super.dispose();
   }
 
-  /// [#5] 선택된 날짜가 속한 월의 기록 날짜들을 조회
   Future<void> _loadMonthlyRecords(DateTime date) async {
     final provider = context.read<SkinDiaryProvider>();
     await provider.fetchMonthlyDiaries(date.year, date.month);
   }
 
-  /// [#2] 선택된 날짜의 기존 다이어리를 불러오고, 있으면 폼에 반영
   Future<void> _loadDiaryForDate(DateTime date) async {
     final provider = context.read<SkinDiaryProvider>();
     await provider.fetchDiaryByDate(date);
@@ -59,7 +57,6 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
 
     final diary = provider.currentDiary;
     if (diary != null) {
-      // DB에서 불러온 데이터를 폼에 반영
       setState(() {
         _skinScore = diary.skinScore;
         _sleepHours = (diary.sleepTimeMinutes ?? 0) / 60.0;
@@ -69,7 +66,6 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
         _selectedProductIds.addAll(diary.usedCosmetics.map((c) => c.id));
       });
     } else {
-      // [#1] 기록이 없으면 디폴트 0으로 초기화
       setState(() {
         _skinScore = 0;
         _sleepHours = 0.0;
@@ -80,27 +76,24 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
     }
   }
 
-  /// 날짜 변경 처리 (애니메이션 방향 계산 포함)
   void _changeDate(DateTime newDate) {
     if (newDate.year == _selectedDate.year &&
         newDate.month == _selectedDate.month &&
         newDate.day == _selectedDate.day) return;
 
     setState(() {
-      // [#3] 새 날짜가 기존보다 미래인지 판단하여 애니메이션 방향 결정
       _slideForward = newDate.isAfter(_selectedDate);
       _selectedDate = newDate;
     });
 
     _loadDiaryForDate(newDate);
 
-    // 월이 바뀌면 기록 날짜도 새로 조회
-    if (newDate.month != _selectedDate.month || newDate.year != _selectedDate.year) {
+    if (newDate.month != _selectedDate.month ||
+        newDate.year != _selectedDate.year) {
       _loadMonthlyRecords(newDate);
     }
   }
 
-  // [#2] 데이터 저장 후 DB에서 다시 불러오기
   Future<void> _submitDiary() async {
     final int sleepTimeMinutes = (_sleepHours * 60).toInt();
     final int waterIntakeMl = (_waterLiters * 1000).toInt();
@@ -124,17 +117,16 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
 
     try {
       if (provider.currentDiary != null) {
-        await provider.updateDiary(provider.currentDiary!.skinDiaryId, request);
+        await provider.updateDiary(
+            provider.currentDiary!.skinDiaryId, request);
       } else {
         await provider.createDiary(request);
       }
 
       if (!mounted) return;
 
-      // [#2] 저장 성공 후 DB에서 다시 불러와서 화면에 반영
       await _loadDiaryForDate(_selectedDate);
 
-      // [#5] 저장 후 이번 달 기록 날짜도 갱신 (새 기록이 추가됐으므로 force)
       await provider.fetchMonthlyDiaries(
         _selectedDate.year,
         _selectedDate.month,
@@ -144,39 +136,83 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('기록이 저장되었습니다.'), backgroundColor: AppColors.primary),
+        const SnackBar(
+            content: Text('기록이 저장되었습니다.'),
+            backgroundColor: AppColors.primary),
       );
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('저장 실패: $e'), backgroundColor: AppColors.error),
+        SnackBar(
+            content: Text('저장 실패: $e'),
+            backgroundColor: AppColors.error),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isAuthenticated = context.watch<AuthProvider>().isAuthenticated;
+
+    // ===== 비로그인: 안내 화면 + 로그인 모달 버튼 =====
+    if (!isAuthenticated) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_outline, size: 48, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text(
+                '로그인이 필요한 서비스입니다',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => showLoginModal(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 32, vertical: 12),
+                ),
+                child: const Text('로그인하기',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ===== 로그인 상태: 다이어리 화면 =====
     final diaryProvider = context.watch<SkinDiaryProvider>();
     final bool isLoading = diaryProvider.isLoading;
     final List<dynamic> availableProducts = [];
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      // [#3] 좌우 스와이프로 날짜 이동
       body: GestureDetector(
         onHorizontalDragEnd: (details) {
           if (details.primaryVelocity == null) return;
           if (details.primaryVelocity! < -100) {
-            // 왼쪽으로 스와이프 → 다음 날
             _changeDate(_selectedDate.add(const Duration(days: 1)));
           } else if (details.primaryVelocity! > 100) {
-            // 오른쪽으로 스와이프 → 이전 날
             _changeDate(_selectedDate.subtract(const Duration(days: 1)));
           }
         },
         child: isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            ? const Center(
+            child:
+            CircularProgressIndicator(color: AppColors.primary))
             : RefreshIndicator(
           onRefresh: () async {
             await _loadDiaryForDate(_selectedDate);
@@ -188,27 +224,25 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. 날짜 선택기 (주간 달력)
                 _buildDateSelector(diaryProvider),
                 const SizedBox(height: 24),
-
-                // 2. 다이어리 입력 폼 — [#3] AnimatedSwitcher로 날짜 전환 애니메이션
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   transitionBuilder: (child, animation) {
-                    // 슬라이드 방향에 따라 좌→우 또는 우→좌 애니메이션
                     final offsetTween = Tween<Offset>(
-                      begin: Offset(_slideForward ? 1.0 : -1.0, 0.0),
+                      begin: Offset(
+                          _slideForward ? 1.0 : -1.0, 0.0),
                       end: Offset.zero,
                     );
                     return SlideTransition(
                       position: offsetTween.animate(
-                        CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+                        CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeInOut),
                       ),
                       child: child,
                     );
                   },
-                  // [중요] key가 바뀌어야 AnimatedSwitcher가 전환 애니메이션을 실행함
                   child: _buildRecordCard(
                     availableProducts,
                     key: ValueKey<String>(
@@ -226,18 +260,16 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
   }
 
   // =========================================================================
-  // [#4] 주간 날짜 선택기 — 7일(월~일) 표시 + [#5] 기록 밑줄 표시
+  // 주간 날짜 선택기 — 7일(월~일) + 기록 밑줄 표시
   // =========================================================================
   Widget _buildDateSelector(SkinDiaryProvider provider) {
     const List<String> weekdays = ['월', '화', '수', '목', '금', '토', '일'];
     final DateTime today = DateTime.now();
 
-    // [#4] 선택된 날짜가 속한 주의 월요일 계산
-    // DateTime.weekday: 1(월) ~ 7(일)
     final int daysFromMonday = _selectedDate.weekday - 1;
-    final DateTime monday = _selectedDate.subtract(Duration(days: daysFromMonday));
+    final DateTime monday =
+    _selectedDate.subtract(Duration(days: daysFromMonday));
 
-    // 월요일부터 7일 생성
     final List<DateTime> displayDays = List.generate(7, (index) {
       return monday.add(Duration(days: index));
     });
@@ -252,7 +284,6 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
             date.month == today.month &&
             date.day == today.day;
 
-        // [#5] 이 날짜에 기록이 있는지 확인
         final bool hasRecord = provider.recordedDays.contains(date.day) &&
             date.month == _selectedDate.month &&
             date.year == _selectedDate.year;
@@ -261,7 +292,7 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
           onTap: () => _changeDate(date),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
-            width: 44, // 7일이므로 기존 54에서 축소
+            width: 44,
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
               color: isSelected ? AppColors.primary : Colors.transparent,
@@ -276,7 +307,9 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                     fontWeight: FontWeight.w600,
                     color: isSelected
                         ? Colors.white
-                        : (isToday ? AppColors.primary : AppColors.textSub2),
+                        : (isToday
+                        ? AppColors.primary
+                        : AppColors.textSub2),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -285,19 +318,17 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isSelected ? Colors.white : AppColors.textTitle,
+                    color:
+                    isSelected ? Colors.white : AppColors.textTitle,
                   ),
                 ),
                 const SizedBox(height: 4),
-                // [#5] 기록이 있으면 밑줄(작은 바) 표시
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: hasRecord ? 16 : 0,
                   height: 3,
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? Colors.white
-                        : AppColors.primary,
+                    color: isSelected ? Colors.white : AppColors.primary,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -311,7 +342,6 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
 
   // =========================================================================
   // 다이어리 기록 폼 (Record Card)
-  // [#3] key 파라미터 추가 — AnimatedSwitcher가 날짜 변경을 감지하기 위해 필수
   // =========================================================================
   Widget _buildRecordCard(List<dynamic> availableProducts, {Key? key}) {
     final bool isToday = _selectedDate.year == DateTime.now().year &&
@@ -407,8 +437,8 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                   borderSide: BorderSide.none),
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                  const BorderSide(color: AppColors.primary, width: 1.5)),
+                  borderSide: const BorderSide(
+                      color: AppColors.primary, width: 1.5)),
             ),
           ),
           const SizedBox(height: 24),
@@ -670,7 +700,8 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
             ),
             Text(
               '${value.toStringAsFixed(value == value.truncateToDouble() ? 0 : 1)}$unit',
-              style: TextStyle(fontWeight: FontWeight.bold, color: activeColor),
+              style:
+              TextStyle(fontWeight: FontWeight.bold, color: activeColor),
             )
           ],
         ),

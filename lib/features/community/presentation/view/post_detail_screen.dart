@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
+import '../../../../common/widgets/login_modal.dart';
 import '../providers/community_provider.dart';
 import '../widgets/comment_item.dart';
 
@@ -31,6 +32,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     });
   }
 
+  //전체 리프레쉬
+  Future<void> _refresh() async {
+    final provider = context.read<CommunityProvider>();
+    await provider.fetchPost(widget.postId);
+    await provider.fetchComments(widget.postId);
+  }
+
   @override
   void dispose() {
     _commentController.dispose();
@@ -53,6 +61,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Future<void> _submitComment() async {
+    if (!await requireLogin(context)) return;
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
 
@@ -103,154 +112,160 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           : Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 작성자
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: AppColors.surface,
-                        backgroundImage:
-                        post.authorProfileImageUrl != null
-                            ? NetworkImage(
-                            post.authorProfileImageUrl!)
-                            : null,
-                        child: post.authorProfileImageUrl == null
-                            ? const Icon(Icons.person,
-                            size: 18, color: Colors.grey)
-                            : null,
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                        children: [
-                          Text(post.authorNickname,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600)),
-                          Text(
-                              DateFormat('M.d HH:mm')
-                                  .format(post.createdAt),
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade500)),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
+      child: RefreshIndicator(
+        onRefresh: _refresh,
+          color: AppColors.primary,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 작성자
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: AppColors.surface,
+                          backgroundImage:
+                          post.authorProfileImageUrl != null
+                              ? NetworkImage(
+                              post.authorProfileImageUrl!)
+                              : null,
+                          child: post.authorProfileImageUrl == null
+                              ? const Icon(Icons.person,
+                              size: 18, color: Colors.grey)
+                              : null,
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                          children: [
+                            Text(post.authorNickname,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600)),
+                            Text(
+                                DateFormat('M.d HH:mm')
+                                    .format(post.createdAt),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500)),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
 
-                  // 제목
-                  Text(post.title,
-                      style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textTitle)),
-                  const SizedBox(height: 16),
-
-                  // 이미지 갤러리
-                  if (post.imageUrls.isNotEmpty) ...[
-                    _buildImageGallery(post.imageUrls),
+                    // 제목
+                    Text(post.title,
+                        style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textTitle)),
                     const SizedBox(height: 16),
-                  ],
 
-                  // 본문
-                  Text(post.content ?? '',
-                      style: const TextStyle(
-                          fontSize: 15,
-                          color: AppColors.textBody,
-                          height: 1.6)),
-                  const SizedBox(height: 24),
+                    // 이미지 갤러리
+                    if (post.imageUrls.isNotEmpty) ...[
+                      _buildImageGallery(post.imageUrls),
+                      const SizedBox(height: 16),
+                    ],
 
-                  // 좋아요 + 조회수
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () =>
-                            provider.togglePostLike(post.postId),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: post.likedByMe
-                                ? AppColors.error
-                                .withValues(alpha: 0.1)
-                                : AppColors.surface,
-                            borderRadius:
-                            BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                post.likedByMe
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                size: 18,
-                                color: post.likedByMe
-                                    ? AppColors.error
-                                    : Colors.grey,
-                              ),
-                              const SizedBox(width: 6),
-                              Text('${post.likeCount}',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: post.likedByMe
-                                          ? AppColors.error
-                                          : Colors.grey.shade600)),
-                            ],
+                    // 본문
+                    Text(post.content ?? '',
+                        style: const TextStyle(
+                            fontSize: 15,
+                            color: AppColors.textBody,
+                            height: 1.6)),
+                    const SizedBox(height: 24),
+
+                    // 좋아요 + 조회수
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () async {
+                            if (!await requireLogin(context)) return;
+                            provider.togglePostLike(post.postId);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: post.likedByMe
+                                  ? AppColors.error
+                                  .withValues(alpha: 0.1)
+                                  : AppColors.surface,
+                              borderRadius:
+                              BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  post.likedByMe
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  size: 18,
+                                  color: post.likedByMe
+                                      ? AppColors.error
+                                      : Colors.grey,
+                                ),
+                                const SizedBox(width: 6),
+                                Text('${post.likeCount}',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: post.likedByMe
+                                            ? AppColors.error
+                                            : Colors.grey.shade600)),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text('조회 ${post.viewCount}',
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade500)),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Divider(color: Colors.grey.shade200),
-                  const SizedBox(height: 8),
+                        const SizedBox(width: 12),
+                        Text('조회 ${post.viewCount}',
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade500)),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Divider(color: Colors.grey.shade200),
+                    const SizedBox(height: 8),
 
-                  // 댓글
-                  Text('댓글 ${post.commentCount}',
-                      style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
+                    // 댓글
+                    Text('댓글 ${post.commentCount}',
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
 
-                  if (provider.isCommentsLoading)
-                    const Center(
-                        child: CircularProgressIndicator(
-                            color: AppColors.primary))
-                  else
-                    ...provider.comments.expand((root) => [
-                      CommentItem(
-                        comment: root,
-                        onLike: () =>
-                            provider.toggleCommentLike(
-                                widget.postId,
-                                root.commentId),
-                        onReply: () => _setReplyTarget(
-                            root.commentId,
-                            root.authorNickname),
-                      ),
-                      ...root.children.map((child) =>
-                          CommentItem(
-                            comment: child,
-                            isReply: true,
-                            onLike: () =>
-                                provider.toggleCommentLike(
-                                    widget.postId,
-                                    child.commentId),
-                            onReply: () {},
-                          )),
-                    ]),
-                ],
+                    if (provider.isCommentsLoading)
+                      const Center(
+                          child: CircularProgressIndicator(
+                              color: AppColors.primary))
+                    else
+                      ...provider.comments.expand((root) => [
+                        CommentItem(
+                          comment: root,
+                          onLike: () async {
+                            if (!await requireLogin(context)) return; // [추가]
+                            provider.toggleCommentLike(widget.postId, root.commentId);
+                          },
+                          onReply: () => _setReplyTarget(
+                              root.commentId,
+                              root.authorNickname),
+                        ),
+                        ...root.children.map((child) =>
+                            CommentItem(
+                              comment: child,
+                              isReply: true,
+                              onLike: () =>
+                                  provider.toggleCommentLike(
+                                      widget.postId,
+                                      child.commentId),
+                              onReply: () {},
+                            )),
+                      ]),
+                  ],
+                ),
               ),
             ),
           ),

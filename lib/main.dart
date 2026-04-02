@@ -14,19 +14,24 @@ import 'core/router/app_router.dart';
 import 'common/theme/app_colors.dart';
 import 'core/network/auth_interceptor.dart';
 
-// [Feature]
+// [Feature - Repositories]
+import 'features/admin/data/repositories/admin_repository.dart';
 import 'features/auth/data/repositories/auth_repository.dart';
-import 'features/auth/presentation/providers/auth_provider.dart';
 import 'features/home/data/repositories/cosmetics_repository.dart';
+import 'features/home/data/repositories/member_product_repository.dart';
 import 'features/diary/data/repositories/skin_diary_repository.dart';
-import 'features/diary/presentation/providers/skin_diary_provider.dart';
 import 'features/community/data/repositories/community_repository.dart';
+import 'features/mypage/data/repositories/member_repository.dart';
+
+// [Feature - Providers]
+import 'features/auth/presentation/providers/auth_provider.dart';
+import 'features/diary/presentation/providers/skin_diary_provider.dart';
 import 'features/community/presentation/providers/community_provider.dart';
+import 'features/mypage/presentation/providers/mypage_provider.dart';
+import 'features/search/data/repositories/search_repository.dart';
 
 void main() async {
-  // 엔진 초기화
   WidgetsFlutterBinding.ensureInitialized();
-
   usePathUrlStrategy();
 
   // 환경변수 로드
@@ -36,69 +41,89 @@ void main() async {
     debugPrint("Warning: .env file not found. Using default values.");
   }
 
-  // 보안 저장소 설정
+  // 보안 저장소
   const storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      resetOnError: true,
-    ),
+    aOptions: AndroidOptions(resetOnError: true),
   );
 
-  // 네트워크(Dio) 설정
+  // Dio 설정
   final baseUrl = dotenv.env['API_URL'] ?? 'http://localhost:8080';
 
   final dio = Dio(BaseOptions(
     baseUrl: baseUrl,
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 3),
-    headers: {
-      // JSON 요청: 자동으로 application/json
-      'Accept': 'application/json',
-    },
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 10),
+    headers: {'Accept': 'application/json'},
+    extra: {'withCredentials': true},
   ));
 
-  // [수정된 부분] 인터셉터 초기화 및 등록
-  // 1. 인스턴스 생성
-  final authInterceptor = AuthInterceptor(storage, dio);
+  // AuthProvider 초기화
+  final authProvider = AuthProvider(storage: storage);
+  authProvider.setDio(dio);
 
-  // 2. [중요] 저장소의 토큰을 메모리(변수)로 로드 (비동기)
-  // 이걸 해줘야 API 호출 때마다 디스크를 읽지 않아서 속도가 빠릅니다.
+  // AuthInterceptor 초기화 및 등록
+  final authInterceptor = AuthInterceptor(storage, dio, authProvider);
   await authInterceptor.init();
-
-  // 3. Dio에 등록
   dio.interceptors.add(authInterceptor);
 
+  // 로그인 상태 확인
+  await authProvider.checkLoginStatus();
 
-  // 인스턴스 미리 생성
-  // (AuthInterceptor가 적용된 dio를 사용하므로, 토큰이 자동 주입됨)
+  // Repository 인스턴스 생성
   final cosmeticsRepository = CosmeticsRepository(dio);
+  final memberProductRepository = MemberProductRepository(dio);
   final skinDiaryRepository = SkinDiaryRepository(dio);
-  // [수정] main에서 생성한 storage를 AuthProvider에도 주입하여 인스턴스 통일
-  final authProvider = AuthProvider(storage: storage);
+  final communityRepository = CommunityRepository(dio);
+  final memberRepository = MemberRepository(dio);
+  final searchRepository = SearchRepository(dio);
+
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
+        // ── Dio (직접 사용이 필요한 화면을 위해 등록) ──
+        Provider<Dio>.value(value: dio),
 
+        // ── Auth ──
+        ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
         Provider<AuthRepository>(
           create: (_) => AuthRepository(dio, storage),
         ),
 
+        // ── Admin ──
+        Provider<AdminRepository>(
+          create: (_) => AdminRepository(dio),
+        ),
+
+        // ── Home / Contents ──
         Provider<CosmeticsRepository>.value(value: cosmeticsRepository),
+        Provider<MemberProductRepository>.value(value: memberProductRepository),
 
-        //다이어리 Repository + Provider 등록
+        // ── Diary ──
         Provider<SkinDiaryRepository>.value(value: skinDiaryRepository),
-
-        Provider<CommunityRepository>(
-          create: (_) => CommunityRepository(dio),
-        ),
-
-        ChangeNotifierProvider<CommunityProvider>(
-          create: (_) => CommunityProvider(CommunityRepository(dio)),
-        ),
-
         ChangeNotifierProvider<SkinDiaryProvider>(
           create: (_) => SkinDiaryProvider(skinDiaryRepository),
+        ),
+
+        // ── Community ──
+        Provider<CommunityRepository>.value(value: communityRepository),
+        ChangeNotifierProvider<CommunityProvider>(
+          create: (_) => CommunityProvider(communityRepository),
+        ),
+
+        // ── Member / Mypage ──
+        Provider<MemberRepository>.value(value: memberRepository),
+
+        // ── Search  ──
+        Provider<SearchRepository>.value(value: searchRepository),
+
+        ChangeNotifierProvider<MypageProvider>(
+          create: (_) => MypageProvider(
+            memberRepository,
+            communityRepository,
+            memberProductRepository,
+            skinDiaryRepository,
+          ),
         ),
       ],
       child: SkinnerApp(authProvider: authProvider),
@@ -106,7 +131,6 @@ void main() async {
   );
 }
 
-// ... 아래 SkinnerApp 클래스 등은 기존과 동일합니다 ...
 class SkinnerApp extends StatefulWidget {
   final AuthProvider authProvider;
 
@@ -122,10 +146,6 @@ class _SkinnerAppState extends State<SkinnerApp> {
   @override
   void initState() {
     super.initState();
-    // 앱 시작 시 로그인 상태 체크
-    widget.authProvider.checkLoginStatus();
-
-    // 라우터 설정
     _router = AppRouter.router(widget.authProvider);
   }
 
@@ -199,6 +219,25 @@ class _SkinnerAppState extends State<SkinnerApp> {
         Locale('ko', 'KR'),
         Locale('en', 'US'),
       ],
+      builder: (context, child) {
+        return Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 430),
+            decoration: BoxDecoration(
+              boxShadow: MediaQuery.of(context).size.width > 430
+                  ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                ),
+              ]
+                  : [],
+            ),
+            child: ClipRect(child: child),
+          ),
+        );
+      },
       routerConfig: _router,
     );
   }

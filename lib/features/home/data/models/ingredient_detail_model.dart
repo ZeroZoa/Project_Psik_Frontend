@@ -5,10 +5,11 @@ class IngredientDetailModel {
   final String name;
   final String typeTitle;
   final String typeDescription;
+  final String effectSummary;
   final String description;
   final List<String> effects;
   final List<String> cautions;
-  final List<String> tags;
+  final List<String> skinConcerns;
   final List<ProductModel> products;
 
   IngredientDetailModel({
@@ -16,10 +17,11 @@ class IngredientDetailModel {
     required this.name,
     required this.typeTitle,
     required this.typeDescription,
+    required this.effectSummary,
     required this.description,
     required this.effects,
     required this.cautions,
-    required this.tags,
+    required this.skinConcerns,
     required this.products,
   });
 
@@ -29,13 +31,24 @@ class IngredientDetailModel {
       name: json['name'] as String,
       typeTitle: json['typeTitle'] as String,
       typeDescription: json['typeDescription'] as String? ?? '',
+      effectSummary: json['effectSummary'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      effects: (json['effects'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-      cautions: (json['cautions'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-      tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      effects: (json['effects'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList() ??
+          [],
+      cautions: (json['cautions'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList() ??
+          [],
+      skinConcerns: (json['skinConcerns'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList() ??
+          [],
       products: (json['products'] as List<dynamic>?)
           ?.map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
-          .toList() ?? [],
+          .toList() ??
+          [],
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -21,7 +22,7 @@ class CommunityRepository {
     try {
       final response = await _dio.get(
         '/api/posts',
-        queryParameters: {'sort': sort, 'page': page, 'size': size},
+        queryParameters: {'sortBy': sort, 'page': page, 'size': size},
       );
       final List<dynamic> content = response.data['content'];
       return content.map((json) => PostModel.fromJson(json)).toList();
@@ -218,11 +219,10 @@ class CommunityRepository {
       ) async {
     final formData = FormData();
 
-    // [수정] JSON part를 MultipartFile.fromString으로 보내야
+    // JSON part를 MultipartFile.fromString으로 보내야
     // Spring @RequestPart("request")가 application/json으로 파싱 가능
     // fields.add로 보내면 text/plain으로 전송돼서 Spring이 JSON 파싱 못 함
-    final jsonString = '{"title":"${title.replaceAll('"', '\\"')}","content":"${content.replaceAll('"', '\\"').replaceAll('\n', '\\n')}"}';
-
+    final jsonString = jsonEncode({'title': title, 'content': content});
     formData.files.add(MapEntry(
       'request',
       MultipartFile.fromString(

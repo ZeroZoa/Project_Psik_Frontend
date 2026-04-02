@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../models/ingredient_summary_model.dart';
 import '../models/ingredient_detail_model.dart';
@@ -7,28 +8,49 @@ class CosmeticsRepository {
 
   CosmeticsRepository(this._dio);
 
-  // 성분 목록 조회 (GET /api/ingredients)
-  // 백엔드 Page<IngredientResponse> 구조 처리를 위해 content 추출
   Future<List<IngredientSummaryModel>> getIngredients() async {
     try {
       final response = await _dio.get('/api/ingredients');
-
-      // Spring Page 객체는 'content' 필드 안에 리스트가 있음
-      final List<dynamic> content = response.data['content'];
-
+      final data = jsonDecode(jsonEncode(response.data));
+      final List<dynamic> content = data['content'];
       return content.map((json) => IngredientSummaryModel.fromJson(json)).toList();
     } catch (e) {
       throw Exception('성분 목록 조회 실패: $e');
     }
   }
 
-  // 성분 상세 조회 (GET /api/ingredients/{id})
   Future<IngredientDetailModel> getIngredientDetail(int id) async {
     try {
       final response = await _dio.get('/api/ingredients/$id');
-      return IngredientDetailModel.fromJson(response.data);
+      final data = jsonDecode(jsonEncode(response.data));
+      return IngredientDetailModel.fromJson(data);
     } catch (e) {
       throw Exception('성분 상세 조회 실패: $e');
+    }
+  }
+
+  Future<Map<String, List<IngredientSummaryModel>>> getRecommendedIngredients(
+      List<String> skinConcerns) async {
+    try {
+      final response = await _dio.get(
+        '/api/ingredients/recommended',
+        queryParameters: {'skinConcerns': skinConcerns},
+      );
+
+      // Flutter Web JSArray/JSObject → Dart List/Map 변환
+      final List<dynamic> data = jsonDecode(jsonEncode(response.data));
+
+      return Map.fromEntries(
+        data.map((group) {
+          final key = group['concern'] as String;
+          final list = (group['ingredients'] as List<dynamic>)
+              .map((e) => IngredientSummaryModel.fromJson(e as Map<String, dynamic>))
+              .toList();
+          return MapEntry(key, list);
+        }),
+      );
+    } catch (e) {
+      throw Exception('추천 성분 조회 실패: $e');
     }
   }
 }
