@@ -1,56 +1,79 @@
 import 'package:flutter/material.dart';
-
+import '../../../../features/auth/domain/enums/skin_concern.dart';
 import '../../data/models/ingredient_detail_model.dart';
-import '../../data/models/ingredient_summary_model.dart';
 import '../../data/repositories/cosmetics_repository.dart';
-
 
 class HomeProvider extends ChangeNotifier {
   final CosmeticsRepository _repository;
+  final List<SkinConcern> userSkinConcerns;
 
-  HomeProvider(this._repository);
+  HomeProvider(this._repository, {required this.userSkinConcerns});
 
-  bool isListLoading = true;
-  bool isDetailLoading = false;
+  bool isLoading = true;
 
-  List<IngredientSummaryModel> summaryList = [];
-  IngredientDetailModel? selectedDetail;
-  int? selectedId;
+  // 고민별 추천 성분 상세 목록
+  Map<SkinConcern, List<IngredientDetailModel>> recommendedDetailMap = {};
 
-  // 초기화: 목록 불러오기 -> 첫 번째 성분 상세 자동 로드
+  // Psik 추천 기타 성분 상세 목록
+  List<IngredientDetailModel> otherIngredientDetails = [];
+
   Future<void> init() async {
-    isListLoading = true;
+    isLoading = true;
     notifyListeners();
 
     try {
-      summaryList = await _repository.getIngredients();
-      if (summaryList.isNotEmpty) {
-        await selectIngredient(summaryList.first.id);
+      if (userSkinConcerns.isNotEmpty) {
+        // 로그인 + 고민 설정된 유저 → 추천 성분 로드
+        final concerns = userSkinConcerns.map((e) => e.name).toList();
+        final result = await _repository.getRecommendedIngredients(concerns);
+
+        recommendedDetailMap = {};
+        final recommendedIds = <int>{};
+
+        for (final concern in userSkinConcerns) {
+          final summaries = result[concern.name] ?? [];
+          final details = <IngredientDetailModel>[];
+          for (final summary in summaries) {
+            try {
+              final detail = await _repository.getIngredientDetail(summary.id);
+              details.add(detail);
+              recommendedIds.add(summary.id);
+            } catch (e) {
+              debugPrint('[HomeProvider] 상세 로드 실패 (id=${summary.id}): $e');
+            }
+          }
+          recommendedDetailMap[concern] = details;
+        }
+
+        // Psik 추천 성분 전체 노출 (로그인 유저도 전체 보여줌)
+        final allSummaries = await _repository.getIngredients();
+
+        otherIngredientDetails = [];
+        for (final summary in allSummaries) {
+          try {
+            final detail = await _repository.getIngredientDetail(summary.id);
+            otherIngredientDetails.add(detail);
+          } catch (e) {
+            debugPrint('[HomeProvider] 기타 상세 로드 실패 (id=${summary.id}): $e');
+          }
+        }
+      } else {
+        // 비로그인 or 고민 미설정 → 전체 성분 로드
+        final allSummaries = await _repository.getIngredients();
+        otherIngredientDetails = [];
+        for (final summary in allSummaries) {
+          try {
+            final detail = await _repository.getIngredientDetail(summary.id);
+            otherIngredientDetails.add(detail);
+          } catch (e) {
+            debugPrint('[HomeProvider] 전체 성분 로드 실패 (id=${summary.id}): $e');
+          }
+        }
       }
     } catch (e) {
-      debugPrint("Error loading ingredients: $e");
+      debugPrint('[HomeProvider] 로드 실패: $e');
     } finally {
-      isListLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // 성분 탭 선택 시 상세 정보 로드
-  Future<void> selectIngredient(int id) async {
-    // 이미 선택된 거면 무시 (불필요한 API 호출 방지)
-    if (selectedId == id && selectedDetail != null) return;
-
-    selectedId = id;
-    isDetailLoading = true;
-    notifyListeners(); // 로딩 UI 표시
-
-    try {
-      selectedDetail = await _repository.getIngredientDetail(id);
-    } catch (e) {
-      debugPrint("Error loading detail: $e");
-      selectedDetail = null;
-    } finally {
-      isDetailLoading = false;
+      isLoading = false;
       notifyListeners();
     }
   }

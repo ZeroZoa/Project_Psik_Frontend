@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart'; // [필수] 이동 처리를 위해 추가
+import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/app_colors.dart';
 
 class MainBottomNavBar extends StatelessWidget {
@@ -49,33 +50,29 @@ class MainBottomNavBar extends StatelessWidget {
         backgroundColor: Colors.white,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textSub2,
-        showUnselectedLabels: true,
-        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        showSelectedLabels: false,   // 추가
+        showUnselectedLabels: false,  // 이미 있으면 false로 변경
         elevation: 0,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: '홈',
+            icon: Icon(LucideIcons.home),
+            label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.forum_outlined),
-            activeIcon: Icon(Icons.forum),
-            label: '커뮤니티',
+            icon: Icon(LucideIcons.messagesSquare),
+            label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: '검색',
+            icon: Icon(LucideIcons.search),
+            label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.edit_note),
-            label: '다이어리',
+            icon: Icon(LucideIcons.layoutList),
+            label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: '마이',
+            icon: Icon(LucideIcons.user),
+            label: '',
           ),
         ],
       ),

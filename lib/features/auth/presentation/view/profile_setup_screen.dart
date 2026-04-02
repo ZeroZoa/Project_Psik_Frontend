@@ -1,11 +1,19 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
-import '../../domain/enums/skin_type.dart';
+import '../../../auth/domain/enums/gender.dart';
+import '../../../auth/domain/enums/skin_concern.dart';
+import '../../../auth/domain/enums/skin_type.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../mypage/data/repositories/member_repository.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
-  const ProfileSetupScreen({super.key});
+  final bool isEditMode;
+
+  const ProfileSetupScreen({super.key, this.isEditMode = false});
 
   @override
   State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
@@ -13,55 +21,210 @@ class ProfileSetupScreen extends StatefulWidget {
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nicknameController = TextEditingController();
+  final _nicknameController = TextEditingController();
+  final _birthYearController = TextEditingController();
 
-  SkinType? _selectedSkinType; // 이제 import한 Enum을 타입으로 사용
+  Gender? _selectedGender;
+  SkinType? _selectedSkinType;
+  final Set<SkinConcern> _selectedSkinConcerns = {};
+
   bool _isLoading = false;
+  bool _isCheckingNickname = false;
+  bool? _isNicknameAvailable;
+  String _lastCheckedNickname = '';
+
+  static const int _maxSkinConcerns = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEditMode) {
+      // 기존 정보 미리 채우기
+      final authProvider = context.read<AuthProvider>();
+      _nicknameController.text = authProvider.nickname;
+      _selectedSkinConcerns.addAll(authProvider.skinConcerns);
+      // 닉네임은 기존값이므로 중복확인 통과로 처리
+      _isNicknameAvailable = true;
+      _lastCheckedNickname = authProvider.nickname;
+    }
+  }
 
   @override
   void dispose() {
     _nicknameController.dispose();
+    _birthYearController.dispose();
     super.dispose();
   }
 
-  Future<void> _submitProfile() async {
-    FocusScope.of(context).unfocus();
+  Future<void> _checkNickname() async {
+    final nickname = _nicknameController.text.trim();
+    if (nickname.isEmpty || nickname.length < 2) return;
 
-    if (!_formKey.currentState!.validate()) return;
-
-    if (_selectedSkinType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('피부 타입을 선택해주세요.')),
-      );
+    // 기존 닉네임과 동일하면 바로 통과
+    if (widget.isEditMode && nickname == context.read<AuthProvider>().nickname) {
+      setState(() {
+        _isNicknameAvailable = true;
+        _lastCheckedNickname = nickname;
+      });
       return;
     }
 
     setState(() {
-      _isLoading = true;
+      _isCheckingNickname = true;
+      _isNicknameAvailable = null;
     });
 
     try {
-      // TODO: Spring API 호출 (나중에 구현)
-      // print("전송 데이터: ${_selectedSkinType!.name}"); // 예: DRY, OILY
-
-      await Future.delayed(const Duration(milliseconds: 1500));
-
-      if (mounted) {
-        context.go('/home');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('오류 발생: $e')),
-        );
-      }
+      final repo = context.read<MemberRepository>();
+      final isDuplicate = await repo.checkNicknameDuplicate(nickname);
+      if (!mounted) return;
+      setState(() {
+        _isNicknameAvailable = !isDuplicate;
+        _lastCheckedNickname = nickname;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isNicknameAvailable = null);
+      _showSnackBar('닉네임 확인 중 오류가 발생했습니다.');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (mounted) setState(() => _isCheckingNickname = false);
+    }
+  }
+
+  Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
+
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_isNicknameAvailable != true) {
+      _showSnackBar('닉네임 중복 확인을 완료해주세요.');
+      return;
+    }
+    if (_lastCheckedNickname != _nicknameController.text.trim()) {
+      _showSnackBar('닉네임이 변경되었습니다. 다시 중복 확인해주세요.');
+      return;
+    }
+    if (_selectedSkinConcerns.isEmpty) {
+      _showSnackBar('피부 고민을 1개 이상 선택해주세요.');
+      return;
+    }
+
+    if (!widget.isEditMode) {
+      if (_selectedGender == null) {
+        _showSnackBar('성별을 선택해주세요.');
+        return;
+      }
+      if (_selectedSkinType == null) {
+        _showSnackBar('피부 타입을 선택해주세요.');
+        return;
       }
     }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final repo = context.read<MemberRepository>();
+      final authProvider = context.read<AuthProvider>();
+
+      if (widget.isEditMode) {
+        // 닉네임 변경된 경우만 업데이트
+        if (_nicknameController.text.trim() != authProvider.nickname) {
+          await repo.updateNickname(_nicknameController.text.trim());
+        }
+        // 피부 고민 업데이트
+        await repo.updateSkinConcerns(_selectedSkinConcerns.toList());
+
+        if (!mounted) return;
+        // pop 먼저 → 그 다음 notifyListeners() 호출해야 redirect 안 타게됨
+        context.pop();
+        authProvider.onSkinConcernsUpdated(_selectedSkinConcerns.toList());
+      } else {
+        await repo.setupProfile(
+          nickname: _nicknameController.text.trim(),
+          gender: _selectedGender!,
+          birthYear: int.parse(_birthYearController.text.trim()),
+          skinType: _selectedSkinType!,
+          skinConcerns: _selectedSkinConcerns.toList(),
+        );
+
+        if (!mounted) return;
+        authProvider.onProfileSetupComplete(_selectedSkinConcerns.toList());
+        if (!mounted) return;
+        context.go('/home');
+      }
+    } on DioException catch (e) {
+      _showSnackBar(e.response?.data['message'] ?? '오류가 발생했습니다.');
+    } catch (e) {
+      _showSnackBar('오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title, {bool required = true}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textTitle,
+            ),
+          ),
+          if (required)
+            const Text(
+              ' *',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.subPrimary,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.inputBorder,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            color: isSelected ? Colors.white : AppColors.textBody,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -69,110 +232,346 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
+        backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('프로필 설정'),
+          backgroundColor: AppColors.background,
+          automaticallyImplyLeading: widget.isEditMode,
+          leading: widget.isEditMode
+              ? IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: AppColors.textTitle, size: 18),
+            onPressed: () => context.pop(),
+          )
+              : null,
+          title: Text(
+            widget.isEditMode ? '프로필 수정' : '프로필 설정',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textTitle,
+            ),
+          ),
           centerTitle: true,
           elevation: 0,
         ),
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '마지막 단계입니다!\n닉네임과 피부 타입을\n설정해주세요.',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, height: 1.4),
-                  ),
-                  const SizedBox(height: 40),
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!widget.isEditMode) ...[
+                          const Text(
+                            '환영합니다!\n맞춤 피부 케어를 위해\n정보를 입력해주세요.',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textTitle,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 36),
+                        ],
 
-                  // 1. 닉네임 입력
-                  const Text('닉네임', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _nicknameController,
-                    maxLength: 10,
-                    decoration: InputDecoration(
-                      hintText: '한글/영문 2~10자',
-                      counterText: "",
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) return '닉네임을 입력해주세요.';
-                      if (value.length < 2) return '닉네임은 2글자 이상이어야 합니다.';
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // 2. 피부 타입 선택
-                  const Text('피부 타입', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10.0,
-                    runSpacing: 10.0,
-                    // SkinType Enum의 값들을 순회하며 Chip 생성
-                    children: SkinType.values.map((type) {
-                      final isSelected = _selectedSkinType == type;
-                      return ChoiceChip(
-                        label: Text(
-                          type.displayName, // '건성', '지성' 등 표시
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black87,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        // ── 닉네임 ──
+                        _sectionTitle('닉네임'),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _nicknameController,
+                                  maxLength: 20,
+                                  onChanged: (_) {
+                                    if (_isNicknameAvailable != null) {
+                                      setState(() => _isNicknameAvailable = null);
+                                    }
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText: '한글/영문/숫자 2~20자',
+                                    counterText: '',
+                                    filled: true,
+                                    fillColor: AppColors.surface,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 16),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: const BorderSide(color: AppColors.inputBorder),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: const BorderSide(color: AppColors.inputBorder),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                                    ),
+                                    errorBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: const BorderSide(color: AppColors.error),
+                                    ),
+                                    suffixIcon: _isNicknameAvailable == null
+                                        ? null
+                                        : Icon(
+                                      _isNicknameAvailable!
+                                          ? Icons.check_circle_outline
+                                          : Icons.cancel_outlined,
+                                      color: _isNicknameAvailable!
+                                          ? AppColors.success
+                                          : AppColors.error,
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return '닉네임을 입력해주세요.';
+                                    }
+                                    if (value.trim().length < 2) {
+                                      return '닉네임은 2자 이상이어야 합니다.';
+                                    }
+                                    final regex = RegExp(r'^[가-힣a-zA-Z0-9_]+$');
+                                    if (!regex.hasMatch(value.trim())) {
+                                      return '한글, 영문, 숫자, 언더스코어만 사용 가능합니다.';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: _isCheckingNickname ? null : _checkNickname,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.secondary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: _isCheckingNickname
+                                    ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                    : const Text('중복확인', style: TextStyle(fontSize: 13)),
+                              ),
+                            ],
                           ),
                         ),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) _selectedSkinType = type;
-                          });
-                        },
-                        selectedColor: AppColors.primary,
-                        backgroundColor: Colors.grey[100],
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(
-                            color: isSelected ? Colors.transparent : Colors.grey.shade300,
+                        if (_isNicknameAvailable != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6, left: 4),
+                            child: Text(
+                              _isNicknameAvailable!
+                                  ? '사용 가능한 닉네임입니다.'
+                                  : '이미 사용 중인 닉네임입니다.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _isNicknameAvailable! ? AppColors.success : AppColors.error,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 28),
+
+                        // ── 최초 설정 전용 필드 ──
+                        if (!widget.isEditMode) ...[
+                          // 성별
+                          _sectionTitle('성별'),
+                          Wrap(
+                            spacing: 10,
+                            children: Gender.values.map((gender) {
+                              return _buildSelectChip(
+                                label: gender.displayName,
+                                isSelected: _selectedGender == gender,
+                                onTap: () => setState(() => _selectedGender = gender),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 28),
+
+                          // 출생연도
+                          _sectionTitle('출생연도'),
+                          TextFormField(
+                            controller: _birthYearController,
+                            keyboardType: TextInputType.number,
+                            maxLength: 4,
+                            decoration: InputDecoration(
+                              hintText: '예) 1998',
+                              counterText: '',
+                              filled: true,
+                              fillColor: AppColors.surface,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 16),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: const BorderSide(color: AppColors.inputBorder),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: const BorderSide(color: AppColors.inputBorder),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: const BorderSide(color: AppColors.error),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return '출생연도를 입력해주세요.';
+                              }
+                              final year = int.tryParse(value.trim());
+                              if (year == null) return '숫자만 입력해주세요.';
+                              final currentYear = DateTime.now().year;
+                              if (year < 1900 || year > currentYear) {
+                                return '올바른 출생연도를 입력해주세요.';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 28),
+
+                          // 피부 타입
+                          _sectionTitle('피부 타입'),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: SkinType.values.map((type) {
+                              return _buildSelectChip(
+                                label: type.displayName,
+                                isSelected: _selectedSkinType == type,
+                                onTap: () => setState(() => _selectedSkinType = type),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 28),
+                        ],
+
+                        // ── 피부 고민 ──
+                        _sectionTitle('피부 고민'),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: [
+                              const Text(
+                                '최소 1개, 최대 3개까지 선택 가능해요.',
+                                style: TextStyle(fontSize: 13, color: AppColors.textSub2),
+                              ),
+                              const Spacer(),
+                              Text(
+                                '${_selectedSkinConcerns.length}/$_maxSkinConcerns',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: _selectedSkinConcerns.length == _maxSkinConcerns
+                                      ? AppColors.primary
+                                      : AppColors.textSub2,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    }).toList(),
-                  ),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: SkinConcern.values.map((concern) {
+                            final isSelected = _selectedSkinConcerns.contains(concern);
+                            final isMaxReached = _selectedSkinConcerns.length >= _maxSkinConcerns;
+                            final isDisabled = !isSelected && isMaxReached;
 
-                  const SizedBox(height: 60),
-
-                  // 3. 완료 버튼
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submitProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                        height: 24, width: 24,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                          : const Text(
-                        '시작하기',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
+                            return GestureDetector(
+                              onTap: isDisabled
+                                  ? () => _showSnackBar('피부 고민은 최대 $_maxSkinConcerns개까지 선택 가능해요.')
+                                  : () {
+                                setState(() {
+                                  if (isSelected) {
+                                    _selectedSkinConcerns.remove(concern);
+                                  } else {
+                                    _selectedSkinConcerns.add(concern);
+                                  }
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : isDisabled
+                                      ? AppColors.surface.withValues(alpha: 0.5)
+                                      : AppColors.surface,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isSelected ? AppColors.primary : AppColors.inputBorder,
+                                  ),
+                                ),
+                                child: Text(
+                                  concern.displayName,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : isDisabled
+                                        ? AppColors.textSub1
+                                        : AppColors.textBody,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 48),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+
+              // ── 하단 버튼 ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                        : Text(
+                      widget.isEditMode ? '저장' : '시작하기',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

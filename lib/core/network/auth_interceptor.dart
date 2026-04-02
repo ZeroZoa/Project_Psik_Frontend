@@ -2,12 +2,14 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../features/auth/presentation/providers/auth_provider.dart';
 
 class AuthInterceptor extends Interceptor {
   final FlutterSecureStorage storage;
   final Dio dio;
+  final AuthProvider authProvider;
 
-  AuthInterceptor(this.storage, this.dio);
+  AuthInterceptor(this.storage, this.dio, this.authProvider);
 
   static const String _accessTokenKey = 'accessToken';
   static const String _refreshTokenKey = 'refreshToken';
@@ -166,7 +168,7 @@ class AuthInterceptor extends Interceptor {
 
   Future<void> _forceLogout() async {
     _accessTokenCache = null;
-    await storage.deleteAll();
+    await authProvider.forceLogout();
     debugPrint('[AuthInterceptor] 강제 로그아웃 처리됨');
   }
 }

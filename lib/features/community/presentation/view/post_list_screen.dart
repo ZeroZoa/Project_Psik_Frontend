@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
+import '../../../../common/widgets/login_modal.dart';
 import '../providers/community_provider.dart';
 import '../widgets/post_card.dart';
 
@@ -77,8 +78,12 @@ class _PostListScreenState extends State<PostListScreen> {
                   final post = provider.posts[index];
                   return PostCard(
                     post: post,
-                    onTap: () => context
-                        .push('/community/${post.postId}'),
+                    onTap: () async {
+                      await context.push('/community/${post.postId}');
+                      if (context.mounted) {
+                        context.read<CommunityProvider>().refreshPosts();
+                      }
+                    },
                   );
                 },
               ),
@@ -86,8 +91,12 @@ class _PostListScreenState extends State<PostListScreen> {
           ),
         ],
       ),
+      //글쓰기 버튼 — 비로그인 시 로그인 모달
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/community/write'),
+        onPressed: () async {
+          if (!await requireLogin(context)) return;
+          if (context.mounted) context.push('/community/write');
+        },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.edit, color: Colors.white),
       ),

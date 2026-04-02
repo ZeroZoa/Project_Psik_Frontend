@@ -6,6 +6,7 @@ class ProductModel {
   final String? description;
   final String? imageUrl;
   final String? link;
+  final int ownedCount;
 
   ProductModel({
     required this.id,
@@ -15,6 +16,7 @@ class ProductModel {
     this.description,
     this.imageUrl,
     this.link,
+    this.ownedCount = 0,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class ProductModel {
       description: json['description'] as String?,
       imageUrl: json['imageUrl'] as String?,
       link: json['link'] as String?,
+      ownedCount: json['ownedCount'] as int? ?? 0,
     );
   }
 }
