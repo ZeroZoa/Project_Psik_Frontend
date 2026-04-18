@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
-import '../../../community/data/models/post_model.dart';
 import '../../../community/presentation/widgets/post_card.dart';
 import '../../../home/data/models/ingredient_summary_model.dart';
 import '../../data/repositories/search_repository.dart';

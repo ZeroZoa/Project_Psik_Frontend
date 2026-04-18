@@ -285,9 +285,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(
+                                flex:4,
                                 child: TextFormField(
                                   controller: _nicknameController,
-                                  maxLength: 20,
+                                  maxLength: 9,
                                   onChanged: (_) {
                                     if (_isNicknameAvailable != null) {
                                       setState(() => _isNicknameAvailable = null);
@@ -332,7 +333,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                       return '닉네임을 입력해주세요.';
                                     }
                                     if (value.trim().length < 2) {
-                                      return '닉네임은 2자 이상이어야 합니다.';
+                                      return '닉네임은 2자 이상 9자 이하입니다.';
                                     }
                                     final regex = RegExp(r'^[가-힣a-zA-Z0-9_]+$');
                                     if (!regex.hasMatch(value.trim())) {
@@ -342,8 +343,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                   },
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton(
                                 onPressed: _isCheckingNickname ? null : _checkNickname,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.secondary,
@@ -353,17 +355,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
-                                child: _isCheckingNickname
-                                    ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
+                                  child: _isCheckingNickname
+                                      ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
                                     : const Text('중복확인', style: TextStyle(fontSize: 13)),
-                              ),
+                                ),
+                              )
                             ],
                           ),
                         ),

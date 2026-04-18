@@ -12,6 +12,9 @@ import 'ingredient_form_screen.dart';
 import 'ingredient_products_screen.dart';
 
 
+/// 관리자 페이지 진입점
+/// - AdminProvider를 생성하고 _AdminView에 주입
+/// - [AdminScreen] → [_AdminView] → [_IngredientTab] / [_ProductTab]
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
 
@@ -27,6 +30,10 @@ class AdminScreen extends StatelessWidget {
   }
 }
 
+/// 관리자 페이지 메인 뷰
+/// - Scaffold + AppBar + TabBar 구성
+/// - 탭 0: [_IngredientTab] (성분 관리)
+/// - 탭 1: [_ProductTab] (제품 관리)
 class _AdminView extends StatefulWidget {
   const _AdminView();
 
@@ -34,22 +41,27 @@ class _AdminView extends StatefulWidget {
   State<_AdminView> createState() => _AdminViewState();
 }
 
+/// [_AdminView]의 State — TabController 생명주기 관리
 class _AdminViewState extends State<_AdminView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  ///화면이 처음 열릴 때 딱 한 번 실행
+  ///탭 2개짜리 컨트롤러를 생성해서 _tabController에 저장
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
   }
 
+  ///위젯 트리를 제거할때, 직접 생성하 것들을 정리
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
 
+  ///화면 build
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,12 +106,16 @@ class _AdminViewState extends State<_AdminView>
   }
 }
 
-// ── 성분 탭 ──
+/// 성분 탭
+/// [_AdminView] 탭 0 — 성분 목록 + 추가 FAB
+/// - 목록 아이템: [_IngredientTile]
+/// - 추가/수정: [IngredientFormScreen], 제품 연결: [IngredientProductsScreen]
 class _IngredientTab extends StatelessWidget {
   const _IngredientTab();
 
   @override
   Widget build(BuildContext context) {
+    ///Provider를 통해 화면에 뿌려질 데이터에 대한 상태와 로직 관리(Provider -> Repository를 call하여 로직 관리)
     final provider = context.watch<AdminProvider>();
 
     return Scaffold(
@@ -152,6 +168,9 @@ class _IngredientTab extends StatelessWidget {
   }
 }
 
+/// [_IngredientTab] 리스트 아이템
+/// - 성분명 + 타입 표시
+/// - 액션: 제품 연결([IngredientProductsScreen]), 수정([IngredientFormScreen]), 삭제(확인 다이얼로그)
 class _IngredientTile extends StatelessWidget {
   final IngredientSummaryModel ingredient;
 
@@ -242,6 +261,7 @@ class _IngredientTile extends StatelessWidget {
     );
   }
 
+  ///성분 삭제 전 확인용 다이얼로그
   void _confirmDelete(BuildContext context, AdminProvider provider,
       IngredientSummaryModel ingredient) {
     showDialog(
@@ -281,7 +301,10 @@ class _IngredientTile extends StatelessWidget {
   }
 }
 
-// ── 제품 탭 ──
+// 제품 탭
+/// [_AdminView] 탭 1 — 제품 목록 + 추가 FAB
+/// - 목록 아이템: [_ProductTile]
+/// - 추가/수정: [ProductFormScreen]
 class _ProductTab extends StatelessWidget {
   const _ProductTab();
 
@@ -335,6 +358,9 @@ class _ProductTab extends StatelessWidget {
   }
 }
 
+/// [_ProductTab] 리스트 아이템
+/// - 제품명 + 브랜드 표시
+/// - 액션: 수정([ProductFormScreen]), 삭제(확인 다이얼로그)
 class _ProductTile extends StatelessWidget {
   final ProductModel product;
 
@@ -405,6 +431,7 @@ class _ProductTile extends StatelessWidget {
     );
   }
 
+  ///제품 삭제 전 확인용 다이얼로그
   void _confirmDelete(BuildContext context, AdminProvider provider,
       ProductModel product) {
     showDialog(
