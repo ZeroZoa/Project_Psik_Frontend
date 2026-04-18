@@ -72,6 +72,81 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     _cancelReply();
   }
 
+  void _showPostOptions(BuildContext context, CommunityProvider provider, post) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 핸들
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // 수정 버튼
+              // 수정 버튼
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.push('/community/write', extra: post);
+                  },
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  label: const Text('수정하기',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: AppColors.textBody,
+                    backgroundColor: Colors.grey.shade100,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // 삭제 버튼
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await provider.deletePost(post.postId);
+                    if (context.mounted) context.pop();
+                  },
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  label: const Text('삭제하기',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    backgroundColor: AppColors.error.withValues(alpha: 0.08),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CommunityProvider>();
@@ -88,19 +163,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         title: const Text('게시글'),
         actions: [
           if (post != null)
-            PopupMenuButton<String>(
-              onSelected: (value) async {
-                if (value == 'edit') {
-                  context.push('/community/write', extra: post);
-                } else if (value == 'delete') {
-                  await provider.deletePost(post.postId);
-                  if (context.mounted) context.pop();
-                }
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(value: 'edit', child: Text('수정')),
-                const PopupMenuItem(value: 'delete', child: Text('삭제')),
-              ],
+            IconButton(
+              icon: const Icon(Icons.more_vert),
+              onPressed: () => _showPostOptions(context, provider, post),
             ),
         ],
       ),

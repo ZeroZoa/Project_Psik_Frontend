@@ -100,20 +100,29 @@ class _MypageScreenState extends State<MypageScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock_outline, size: 48, color: Colors.grey.shade400),
-              const SizedBox(height: 16),
-              Text('로그인이 필요한 서비스입니다',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+              Icon(Icons.lock_outline, size: 80, color: Colors.grey.shade400),
+              const SizedBox(height: 20),
+              Text('로그인이 필요해요!',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600)),
               const SizedBox(height: 24),
-              ElevatedButton(
+              ElevatedButton.icon(
                 onPressed: () => showLoginModal(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 18, vertical: 13),
                 ),
-                child: const Text('로그인하기',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.login_rounded, color: Colors.white, size: 18),
+                label: const Text('로그인하기',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -504,7 +513,7 @@ class _DiaryStatsSection extends StatelessWidget {
             children: [
               _Legend(color: AppColors.primary, label: '피부점수'),
               const SizedBox(width: 12),
-              _Legend(color: Color(0xFF6366F1), label: '수면(h)'),
+              _Legend(color: AppColors.textBody, label: '수면(h)'),
               const SizedBox(width: 12),
               _Legend(color: Color(0xFF0EA5E9), label: '수분(L)'),
             ],
@@ -546,14 +555,15 @@ class _DiaryStatsSection extends StatelessWidget {
                 ),
                 lineBarsData: [
                   _lineBar(spots: spots1, color: AppColors.primary),
-                  _lineBar(spots: spots2, color: const Color(0xFF6366F1)),
+                  _lineBar(spots: spots2, color: AppColors.textBody),
                   _lineBar(spots: spots3, color: const Color(0xFF0EA5E9)),
                 ],
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) => const Color(0xFFF3F4F6),
                     getTooltipItems: (touchedSpots) =>
                         touchedSpots.map((spot) {
-                          final labels = ['점', 'h', 'L'];
+                          final labels = ['점', '시간', 'L'];
                           final unit = labels[spot.barIndex];
                           return LineTooltipItem(
                             '${spot.y.toStringAsFixed(1)}$unit',
@@ -606,9 +616,9 @@ class _Legend extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 12, height: 3, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+        Container(width: 12, height: 3, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12))),
         const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSub2, fontWeight: FontWeight.w500)),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w500)),
       ],
     );
   }

@@ -20,6 +20,8 @@ import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/home/data/repositories/cosmetics_repository.dart';
 import 'features/home/data/repositories/member_product_repository.dart';
 import 'features/diary/data/repositories/skin_diary_repository.dart';
+import 'features/diary/data/repositories/skin_analysis_repository.dart';
+import 'features/diary/presentation/providers/skin_analysis_provider.dart';
 import 'features/community/data/repositories/community_repository.dart';
 import 'features/mypage/data/repositories/member_repository.dart';
 
@@ -73,6 +75,7 @@ void main() async {
   final cosmeticsRepository = CosmeticsRepository(dio);
   final memberProductRepository = MemberProductRepository(dio);
   final skinDiaryRepository = SkinDiaryRepository(dio);
+  final skinAnalysisRepository = SkinAnalysisRepository(dio);
   final communityRepository = CommunityRepository(dio);
   final memberRepository = MemberRepository(dio);
   final searchRepository = SearchRepository(dio);
@@ -103,6 +106,10 @@ void main() async {
         Provider<SkinDiaryRepository>.value(value: skinDiaryRepository),
         ChangeNotifierProvider<SkinDiaryProvider>(
           create: (_) => SkinDiaryProvider(skinDiaryRepository),
+        ),
+        Provider<SkinAnalysisRepository>.value(value: skinAnalysisRepository),
+        ChangeNotifierProvider<SkinAnalysisProvider>(
+          create: (_) => SkinAnalysisProvider(skinAnalysisRepository),
         ),
 
         // ── Community ──

@@ -295,7 +295,7 @@ class _SummaryCard extends StatelessWidget {
             const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: theme.lightBg,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
               detail.typeTitle,
@@ -356,7 +356,7 @@ class _SummaryCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -523,7 +523,7 @@ class _EffectsCardState extends State<_EffectsCard> {
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: widget.theme.lightBg,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

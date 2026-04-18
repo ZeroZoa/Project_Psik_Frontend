@@ -116,31 +116,28 @@ class _PostListScreenState extends State<PostListScreen> {
         children: tabs
             .map((tab) => Padding(
           padding: const EdgeInsets.only(right: 8),
-          child: GestureDetector(
-            onTap: () => provider.changeSortAndRefresh(tab.$1),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: provider.currentSort == tab.$1
-                    ? AppColors.primary
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: provider.currentSort == tab.$1
-                      ? Colors.transparent
-                      : Colors.grey.shade300,
-                ),
+          child: ElevatedButton(
+            onPressed: () => provider.changeSortAndRefresh(tab.$1),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: provider.currentSort == tab.$1
+                  ? AppColors.primary
+                  : Colors.grey.shade100,
+              foregroundColor: provider.currentSort == tab.$1
+                  ? Colors.white
+                  : Colors.grey.shade600,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                tab.$2,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: provider.currentSort == tab.$1
-                      ? Colors.white
-                      : Colors.grey.shade600,
-                ),
+            ),
+            child: Text(
+              tab.$2,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

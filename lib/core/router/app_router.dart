@@ -128,7 +128,7 @@ class AppRouter {
 
             return Scaffold(
               backgroundColor: Colors.white,
-              appBar: const MainTopNavBar(),
+              appBar: MainTopNavBar(isHome: location == '/home'),
               body: child,
               bottomNavigationBar: MainBottomNavBar(
                 currentIndex: currentIndex,

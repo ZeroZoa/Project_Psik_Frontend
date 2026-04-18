@@ -7,7 +7,6 @@ import '../../../../features/auth/domain/enums/skin_concern.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
 import '../../data/models/ingredient_detail_model.dart';
 import '../../data/repositories/cosmetics_repository.dart';
-import '../../../mypage/data/repositories/member_repository.dart';
 import '../providers/home_provider.dart';
 import '../widgets/ingredient_info_card.dart';
 
@@ -42,44 +41,6 @@ class _HomeView extends StatelessWidget {
     required this.userSkinConcerns,
   });
 
-  // ── 피부 고민 수정 바텀시트 ──
-  void _showEditConcernsSheet(BuildContext context) {
-    final authProvider = context.read<AuthProvider>();
-    final memberRepository = context.read<MemberRepository>();
-    final selected = Set<SkinConcern>.from(authProvider.skinConcerns);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        return _SkinConcernEditSheet(
-          initialSelected: selected,
-          onSave: (concerns) async {
-            try {
-              await memberRepository.updateSkinConcerns(concerns);
-              authProvider.onSkinConcernsUpdated(concerns);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('피부 고민이 수정되었습니다.')),
-                );
-              }
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('수정에 실패했습니다. 다시 시도해주세요.')),
-                );
-              }
-            }
-          },
-        );
-      },
-    );
-  }
-
   Widget _buildConcernSection(
       SkinConcern concern,
       List<IngredientDetailModel> details, {
@@ -94,7 +55,7 @@ class _HomeView extends StatelessWidget {
             child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 14),
+          padding: const EdgeInsets.fromLTRB(24, 10, 24, 14),
           child: Row(
             children: [
               Expanded(
@@ -194,90 +155,36 @@ class _HomeView extends StatelessWidget {
         child: CustomScrollView(
           slivers: [
 
-            // ── 피부 고민 뱃지 + 수정 버튼 (로그인 + 고민 설정된 경우) ──
+            // ── 상단 여백 (로그인 + 고민 설정된 경우) ──
             if (userSkinConcerns.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: userSkinConcerns.map((concern) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                concern.displayName,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () => _showEditConcernsSheet(context),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 7),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '고민 수정',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSub2,
-                                ),
-                              ),
-                              SizedBox(width: 1),
-                              Icon(
-                                Icons.keyboard_arrow_right_rounded,
-                                color: AppColors.textSub2,
-                                size: 19,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 5)),
 
-            // ── 헤더 ──
+            // ── 헤더  ──
             if (userSkinConcerns.isNotEmpty)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-                  child: RichText(
-                    text: TextSpan(
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textTitle,
-                        height: 1.4,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: nickname.isNotEmpty ? nickname : '회원',
-                          style: const TextStyle(color: AppColors.primary),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textTitle,
+                            height: 1.4,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: nickname.isNotEmpty ? nickname : '회원',
+                              style: const TextStyle(color: AppColors.primary),
+                            ),
+                            const TextSpan(text: '님에게 딱 맞는 피부공식'),
+                          ],
                         ),
-                        const TextSpan(text: '님에게 딱 맞는 피부 공식'),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -316,16 +223,16 @@ class _HomeView extends StatelessWidget {
                         ),
                       ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 14),
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 14),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         textBaseline: TextBaseline.ideographic,
                         children: [
                           Container(
                             width: 3.5,
-                            height: 36,
+                            height: 38,
                             decoration: BoxDecoration(
-                              color: AppColors.secondary,
+                              color: AppColors.primary,
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -378,192 +285,6 @@ class _HomeView extends StatelessWidget {
             const SliverToBoxAdapter(child: SizedBox(height: 48)),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── 피부 고민 수정 바텀시트 ──
-class _SkinConcernEditSheet extends StatefulWidget {
-  final Set<SkinConcern> initialSelected;
-  final Future<void> Function(List<SkinConcern>) onSave;
-
-  const _SkinConcernEditSheet({
-    required this.initialSelected,
-    required this.onSave,
-  });
-
-  @override
-  State<_SkinConcernEditSheet> createState() => _SkinConcernEditSheetState();
-}
-
-class _SkinConcernEditSheetState extends State<_SkinConcernEditSheet> {
-  late Set<SkinConcern> _selected;
-  bool _isSaving = false;
-  static const int _max = 3;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = Set.from(widget.initialSelected);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 핸들
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE5E7EB),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 4),
-            child: Row(
-              children: [
-                const Text(
-                  '피부 고민 수정',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textTitle,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${_selected.length}/$_max',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: _selected.length == _max
-                        ? AppColors.primary
-                        : AppColors.textSub2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(left: 24, bottom: 16),
-            child: Text(
-              '최소 1개, 최대 3개까지 선택 가능해요.',
-              style: TextStyle(fontSize: 13, color: AppColors.textSub2),
-            ),
-          ),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-              child: Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: SkinConcern.values.map((concern) {
-                  final isSelected = _selected.contains(concern);
-                  final isDisabled = !isSelected && _selected.length >= _max;
-                  return GestureDetector(
-                    onTap: isDisabled
-                        ? null
-                        : () {
-                      setState(() {
-                        if (isSelected) {
-                          _selected.remove(concern);
-                        } else {
-                          _selected.add(concern);
-                        }
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary
-                            : isDisabled
-                            ? const Color(0xFFF3F4F6)
-                            : AppColors.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.primary
-                              : const Color(0xFFE5E7EB),
-                        ),
-                      ),
-                      child: Text(
-                        concern.displayName,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: isSelected
-                              ? Colors.white
-                              : isDisabled
-                              ? AppColors.textSub1
-                              : AppColors.textBody,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: (_isSaving || _selected.isEmpty)
-                    ? null
-                    : () async {
-                  setState(() => _isSaving = true);
-                  await widget.onSave(_selected.toList());
-                  if (context.mounted) Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  disabledBackgroundColor:
-                  AppColors.primary.withValues(alpha: 0.4),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: _isSaving
-                    ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-                    : const Text(
-                  '저장',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
