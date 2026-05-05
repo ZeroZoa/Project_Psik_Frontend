@@ -44,4 +44,25 @@ class MemberProductRepository {
       throw Exception('샀어요 목록 조회 실패: $e');
     }
   }
+
+  /// 제품 이름/브랜드 검색 - GET /api/products/search
+  /// [keyword] null 또는 빈 문자열이면 전체 조회
+  Future<List<ProductModel>> searchProducts({String? keyword, int page = 0, int size = 20}) async {
+    try {
+      final response = await _dio.get(
+        '/api/products/search',
+        queryParameters: {
+          if (keyword != null && keyword.isNotEmpty) 'keyword': keyword,
+          'page': page,
+          'size': size,
+        },
+      );
+      final List<dynamic> content = response.data['content'] as List<dynamic>;
+      return content
+          .map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('제품 검색 실패: $e');
+    }
+  }
 }

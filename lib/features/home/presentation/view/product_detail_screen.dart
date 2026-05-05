@@ -12,6 +12,9 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/product_model.dart';
 import '../../data/repositories/member_product_repository.dart';
 
+/// 제품 상세 정보 화면 진입점
+/// - [product] GoRouter extra로 전달받은 [ProductModel]
+/// - 샀어요 여부 및 카운트는 진입 시 [MemberProductRepository.getOwnedStatus]로 별도 조회
 class ProductDetailScreen extends StatefulWidget {
   final ProductModel product;
 
@@ -21,11 +24,14 @@ class ProductDetailScreen extends StatefulWidget {
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
 }
 
+/// [ProductDetailScreen]의 State — 샀어요 여부/카운트/로딩 상태 관리
+/// 관리 상태: _owned(샀어요 여부), _ownedCount(총 샀어요 수), _isLoading
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   late bool _owned;
   late int _ownedCount;
   bool _isLoading = false;
 
+  /// product.ownedCount로 초기값 설정 후 인증 사용자면 실제 샀어요 상태 조회
   @override
   void initState() {
     super.initState();
@@ -34,6 +40,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     _fetchOwnedStatus();
   }
 
+  /// 샀어요 여부 + 총 카운트 조회 — [MemberProductRepository.getOwnedStatus] 호출
+  /// 비로그인 시 조기 반환 (초기값 false/product.ownedCount 유지)
   Future<void> _fetchOwnedStatus() async {
     final isAuthenticated = context.read<AuthProvider>().isAuthenticated;
     if (!isAuthenticated) return;
@@ -49,17 +57,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     } catch (_) {}
   }
 
+  /// RefreshIndicator의 onRefresh 핸들러 — 샀어요 상태 재조회
   Future<void> _refresh() async {
     await _fetchOwnedStatus();
   }
 
+  /// 샀어요 등록 — [MemberProductRepository.markAsOwned] 호출
+  /// - 비로그인 시 로그인 모달 표시
+  /// - 이미 샀어요 등록했거나 로딩 중이면 조기 반환 (중복 방지)
+  /// - 실패 시 서버 응답 메시지 스낵바 표시
   Future<void> _markAsOwned() async {
+    final repo = context.read<MemberProductRepository>(); // ← await 전에 미리 캡처
     if (!await requireLogin(context)) return;
     if (_owned || _isLoading) return;
 
     setState(() => _isLoading = true);
     try {
-      final repo = context.read<MemberProductRepository>();
       final result = await repo.markAsOwned(widget.product.id);
       if (!mounted) return;
       setState(() {
@@ -90,7 +103,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
 
-              // ── 앱바 ──
+            // ── 앱바 — 스크롤 시 pinned 고정 ──
             SliverAppBar(
               backgroundColor: Colors.white,
               surfaceTintColor: Colors.transparent,
@@ -119,7 +132,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    // ── 이미지 ──
+                    // ── 제품 이미지 — 로딩/에러 상태 분기 ──
                     Container(
                       width: double.infinity,
                       height: 280,
@@ -238,7 +251,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ── 제품 설명 카드 ──
+                    // ── 제품 설명 카드 (설명이 있는 경우에만 표시) ──
                     if (widget.product.description != null &&
                         widget.product.description!.isNotEmpty)
                       Container(
@@ -332,7 +345,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ),
       ),
 
-      // ── 하단 고정 버튼 ──
+      // ── 하단 고정 bottomSheet — 샀어요 버튼 + 사러가기 버튼 ──
       bottomSheet: Container(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         decoration: BoxDecoration(
@@ -348,7 +361,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ── 샀어요 버튼 ──
+            // ── 샀어요 버튼 — 로딩/등록 상태에 따라 아이콘/카운트 변화 ──
             GestureDetector(
               onTap: _markAsOwned,
               child: SizedBox(
@@ -393,7 +406,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
             const SizedBox(width: 12),
 
-            // ── 사러 가기 버튼 ──
+            // ── 사러가기 버튼 — link 없으면 비활성화 ──
             Expanded(
               child: SizedBox(
                 height: 54,

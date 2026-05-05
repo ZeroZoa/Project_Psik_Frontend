@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+
 import '../../../home/data/models/ingredient_detail_model.dart';
 import '../../../home/data/models/product_model.dart';
 
@@ -161,7 +164,7 @@ class AdminRepository {
   Future<List<ProductModel>> getAllProducts() async {
     try {
       final response = await _dio.get('/api/admin/products');
-      final List<dynamic> data = jsonDecode(jsonEncode(response.data));
+      final List<dynamic> data = jsonDecode(jsonEncode(response.data['content']));
       return data
           .map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -170,5 +173,36 @@ class AdminRepository {
     }
   }
 
+  /// 제품 이미지 업로드 → GCS URL 반환
+  Future<String> uploadProductImage(XFile imageFile) async {
+    try {
+      MultipartFile multipartFile;
 
+      if (kIsWeb) {
+        final Uint8List bytes = await imageFile.readAsBytes();
+        multipartFile = MultipartFile.fromBytes(
+          bytes,
+          filename: imageFile.name,
+        );
+      } else {
+        multipartFile = await MultipartFile.fromFile(
+          imageFile.path,
+          filename: imageFile.name,
+        );
+      }
+
+      final formData = FormData.fromMap({'image': multipartFile});
+
+      final response = await _dio.post(
+        '/api/admin/products/image',
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+
+      return response.data['imageUrl'];
+    } on DioException catch (e) {
+      final message = e.response?.data?['message'] ?? '이미지 업로드에 실패했습니다.';
+      throw Exception(message);
+    }
+  }
 }

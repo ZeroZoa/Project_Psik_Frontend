@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:skinner_frontend/features/admin/presentation/view/product_form_screen.dart';
+import 'package:psik_frontend/features/admin/presentation/view/product_form_screen.dart';
 
 import '../../../../common/theme/app_colors.dart';
 import '../../../home/data/models/ingredient_summary_model.dart';
 import '../../../home/data/models/product_model.dart';
 import '../../../home/data/repositories/cosmetics_repository.dart';
+import '../../../mypage/data/models/InquiryModel.dart';
+import '../../../mypage/data/repositories/inquiry_repository.dart';
 import '../../data/repositories/admin_repository.dart';
 import '../providers/admin_provider.dart';
 import 'ingredient_form_screen.dart';
@@ -24,7 +26,7 @@ class AdminScreen extends StatelessWidget {
       create: (_) => AdminProvider(
         context.read<AdminRepository>(),
         context.read<CosmeticsRepository>(),
-      )..loadIngredients(),
+      )..loadIngredients()..loadAllProducts(),
       child: const _AdminView(),
     );
   }
@@ -47,11 +49,11 @@ class _AdminViewState extends State<_AdminView>
   late TabController _tabController;
 
   ///화면이 처음 열릴 때 딱 한 번 실행
-  ///탭 2개짜리 컨트롤러를 생성해서 _tabController에 저장
+  ///탭 3개짜리 컨트롤러를 생성해서 _tabController에 저장
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   ///위젯 트리를 제거할때, 직접 생성하 것들을 정리
@@ -92,6 +94,7 @@ class _AdminViewState extends State<_AdminView>
           tabs: const [
             Tab(text: '성분 관리'),
             Tab(text: '제품 관리'),
+            Tab(text: '문의 관리'),
           ],
         ),
       ),
@@ -100,6 +103,7 @@ class _AdminViewState extends State<_AdminView>
         children: const [
           _IngredientTab(),
           _ProductTab(),
+          _InquiryTab(),
         ],
       ),
     );
@@ -469,4 +473,382 @@ class _ProductTile extends StatelessWidget {
       ),
     );
   }
+}
+/// 문의 관리 탭 (관리자)
+/// - 전체 문의 목록 표시
+/// - 아이템 탭 시 [_InquiryDetailScreen]으로 이동 (Navigator.push 패턴 동일)
+class _InquiryTab extends StatefulWidget {
+  const _InquiryTab();
+
+  @override
+  State<_InquiryTab> createState() => _InquiryTabState();
+}
+
+class _InquiryTabState extends State<_InquiryTab> {
+  List<InquiryModel> _inquiries = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInquiries();
+  }
+
+  Future<void> _loadInquiries() async {
+    setState(() => _isLoading = true);
+    try {
+      _inquiries =
+      await context.read<InquiryRepository>().getAllInquiries();
+    } catch (e) {
+      debugPrint('문의 목록 조회 실패: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(
+          child: CircularProgressIndicator(color: AppColors.primary));
+    }
+
+    if (_inquiries.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inbox_outlined,
+                size: 48, color: Colors.grey.shade300),
+            const SizedBox(height: 12),
+            const Text('접수된 문의가 없습니다.',
+                style: TextStyle(color: AppColors.textSub2)),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadInquiries,
+      color: AppColors.primary,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: _inquiries.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final inquiry = _inquiries[index];
+          return GestureDetector(
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => _InquiryDetailScreen(
+                    inquiry: inquiry,
+                    onAnswered: _loadInquiries,
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
+                title: Row(
+                  children: [
+                    // 상태 배지
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: inquiry.answered
+                            ? AppColors.primary.withValues(alpha: 0.1)
+                            : AppColors.error.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        inquiry.answered ? '답변 완료' : '미답변',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: inquiry.answered
+                              ? AppColors.primary
+                              : AppColors.error,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        inquiry.title,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textTitle),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    children: [
+                      Text(inquiry.authorNickname,
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.textSub2)),
+                      const Spacer(),
+                      Text(_formatDate(inquiry.createdAt),
+                          style: const TextStyle(
+                              fontSize: 11, color: AppColors.textSub2)),
+                    ],
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded,
+                    color: AppColors.textSub2, size: 18),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _formatDate(DateTime dt) =>
+      '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')}';
+}
+
+/// 문의 상세 + 답변 화면 (관리자)
+/// - Navigator.push 패턴 (_AdminView의 다른 서브화면과 동일)
+/// - 답변 입력창: post_comment_input 패턴 (하단 고정)
+/// - 답변 이미 있으면 입력창 미표시
+class _InquiryDetailScreen extends StatefulWidget {
+  final InquiryModel inquiry;
+  final VoidCallback onAnswered;
+
+  const _InquiryDetailScreen({
+    required this.inquiry,
+    required this.onAnswered,
+  });
+
+  @override
+  State<_InquiryDetailScreen> createState() => _InquiryDetailScreenState();
+}
+
+class _InquiryDetailScreenState extends State<_InquiryDetailScreen> {
+  final _answerController = TextEditingController();
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _answerController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitAnswer() async {
+    final content = _answerController.text.trim();
+    if (content.isEmpty) return;
+
+    setState(() => _isSubmitting = true);
+    try {
+      await context.read<InquiryRepository>().createAnswer(
+        inquiryId: widget.inquiry.id,
+        content: content,
+      );
+      if (!mounted) return;
+      widget.onAnswered();
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('답변이 등록되었습니다.'),
+            backgroundColor: AppColors.primary),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('답변 등록에 실패했습니다.'),
+            backgroundColor: AppColors.error),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final inquiry = widget.inquiry;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              size: 18, color: AppColors.textTitle),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('문의 상세',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textTitle)),
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
+          // ── 문의 내용 ──
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 작성자 + 날짜
+                  Row(
+                    children: [
+                      Text(inquiry.authorNickname,
+                          style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textBody)),
+                      const Spacer(),
+                      Text(_formatDate(inquiry.createdAt),
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.textSub2)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // 제목
+                  Text(inquiry.title,
+                      style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textTitle)),
+                  const SizedBox(height: 16),
+                  Divider(color: Colors.grey.shade200),
+                  const SizedBox(height: 16),
+                  // 내용
+                  Text(inquiry.content,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          color: AppColors.textBody,
+                          height: 1.6)),
+                  // 기존 답변 표시
+                  if (inquiry.answered && inquiry.answerContent != null) ...[
+                    const SizedBox(height: 24),
+                    Divider(color: Colors.grey.shade200),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color:
+                            AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text('답변',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary)),
+                        ),
+                        const Spacer(),
+                        if (inquiry.answeredAt != null)
+                          Text(_formatDate(inquiry.answeredAt!),
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSub2)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(inquiry.answerContent!,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textBody,
+                            height: 1.6)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          // ── 답변 입력창 (post_comment_input 패턴, 답변 없을 때만) ──
+          if (!inquiry.answered)
+            Container(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 8,
+                bottom: MediaQuery.of(context).padding.bottom + 8,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                    top: BorderSide(color: Colors.grey.shade200)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _answerController,
+                      decoration: InputDecoration(
+                        hintText: '답변을 입력하세요...',
+                        hintStyle: const TextStyle(
+                            fontSize: 14, color: AppColors.textSub1),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _isSubmitting ? null : _submitAnswer,
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                          : const Icon(Icons.send,
+                          size: 18, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime dt) =>
+      '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')}';
 }

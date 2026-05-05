@@ -5,8 +5,11 @@ import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
 import '../../../../common/widgets/login_modal.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/community_provider.dart';
 import '../widgets/comment_item.dart';
+import '../widgets/post_image_gallery.dart';
+import '../widgets/post_comment_input.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final int postId;
@@ -20,7 +23,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   final TextEditingController _commentController = TextEditingController();
   int? _replyToCommentId;
   String? _replyToNickname;
-  int _currentImageIndex = 0;
 
   @override
   void initState() {
@@ -61,11 +63,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Future<void> _submitComment() async {
+    final provider = context.read<CommunityProvider>(); // await 전에 미리 캡처
     if (!await requireLogin(context)) return;
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
 
-    final provider = context.read<CommunityProvider>();
     await provider.createComment(widget.postId,
         content: text, parentId: _replyToCommentId);
     _commentController.clear();
@@ -162,11 +164,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             onPressed: () => context.pop()),
         title: const Text('게시글'),
         actions: [
-          if (post != null)
-            IconButton(
-              icon: const Icon(Icons.more_vert),
-              onPressed: () => _showPostOptions(context, provider, post),
-            ),
+          if (post != null) Builder(
+            builder: (context) {
+              final myUuid = context.read<AuthProvider>().memberUuid;
+              final isOwner = myUuid != null && myUuid == post.authorUuid;
+              if (!isOwner) return const SizedBox.shrink();
+              return IconButton(
+                icon: const Icon(Icons.more_vert),
+                onPressed: () => _showPostOptions(context, provider, post),
+              );
+            },
+          ),
         ],
       ),
       body: provider.isDetailLoading
@@ -231,7 +239,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                     // 이미지 갤러리
                     if (post.imageUrls.isNotEmpty) ...[
-                      _buildImageGallery(post.imageUrls),
+                      PostImageGallery(imageUrls: post.imageUrls),
                       const SizedBox(height: 16),
                     ],
 
@@ -334,132 +342,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               ),
             ),
           ),
-          _buildCommentInput(),
-        ],
-      ),
-    );
-  }
-
-  /// 이미지 갤러리 (PageView + 인디케이터)
-  Widget _buildImageGallery(List<String> imageUrls) {
-    return Column(
-      children: [
-        SizedBox(
-          height: 250,
-          child: PageView.builder(
-            itemCount: imageUrls.length,
-            onPageChanged: (index) =>
-                setState(() => _currentImageIndex = index),
-            itemBuilder: (context, index) {
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  imageUrls[index],
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: AppColors.surface,
-                    child: const Center(
-                        child: Icon(Icons.broken_image,
-                            size: 48, color: Colors.grey)),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        if (imageUrls.length > 1) ...[
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              imageUrls.length,
-                  (index) => Container(
-                width: _currentImageIndex == index ? 16 : 6,
-                height: 6,
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                decoration: BoxDecoration(
-                  color: _currentImageIndex == index
-                      ? AppColors.primary
-                      : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildCommentInput() {
-    return Container(
-      padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 8,
-          bottom: MediaQuery.of(context).padding.bottom + 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_replyToNickname != null)
-            Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(8)),
-              child: Row(
-                children: [
-                  Text('$_replyToNickname님에게 답글',
-                      style: const TextStyle(
-                          fontSize: 13, color: AppColors.textBody)),
-                  const Spacer(),
-                  GestureDetector(
-                      onTap: _cancelReply,
-                      child: const Icon(Icons.close,
-                          size: 16, color: Colors.grey)),
-                ],
-              ),
-            ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _commentController,
-                  decoration: InputDecoration(
-                    hintText: _replyToNickname != null
-                        ? '답글을 입력하세요...'
-                        : '댓글을 입력하세요...',
-                    hintStyle: const TextStyle(
-                        fontSize: 14, color: AppColors.textSub1),
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: _submitComment,
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(
-                      color: AppColors.primary, shape: BoxShape.circle),
-                  child:
-                  const Icon(Icons.send, size: 18, color: Colors.white),
-                ),
-              ),
-            ],
+          PostCommentInput(
+            controller: _commentController,
+            replyToNickname: _replyToNickname,
+            onSubmit: _submitComment,
+            onCancelReply: _cancelReply,
           ),
         ],
       ),

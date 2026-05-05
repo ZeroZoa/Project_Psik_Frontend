@@ -1,5 +1,5 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -10,10 +10,13 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../community/data/models/comment_model.dart';
 import '../../../community/data/models/post_model.dart';
 import '../../../community/presentation/widgets/post_card.dart';
-import '../../../diary/data/models/skin_diary_response.dart';
 import '../../../home/data/models/product_model.dart';
 import '../providers/mypage_provider.dart';
+import '../widgets/mypage_diary_stats_section.dart';
 
+/// 마이페이지 화면 진입점
+/// - 비로그인 시 로그인 유도 UI 표시
+/// - 프로필 헤더 / 30일 다이어리 그래프 / 활동 섹션 메뉴 / 섹션별 콘텐츠 구성
 class MypageScreen extends StatefulWidget {
   const MypageScreen({super.key});
 
@@ -21,6 +24,8 @@ class MypageScreen extends StatefulWidget {
   State<MypageScreen> createState() => _MypageScreenState();
 }
 
+/// [MypageScreen]의 State — 활동 섹션 선택 인덱스 관리
+/// 관리 상태: _selectedSection (0:내 글 / 1:좋아요 / 2:댓글 단 글 / 3:내 댓글 / 4:샀어요)
 class _MypageScreenState extends State<MypageScreen> {
   // 선택된 활동 섹션 인덱스 (0: 내 글, 1: 좋아요, 2: 댓글 단 글, 3: 내 댓글, 4: 샀어요)
   int _selectedSection = 0;
@@ -33,6 +38,7 @@ class _MypageScreenState extends State<MypageScreen> {
     (label: '샀어요', icon: Icons.shopping_bag_outlined),
   ];
 
+  /// 인증 사용자 진입 시 프로필 / 내 글 목록 / 최근 30일 다이어리 초기 로드
   @override
   void initState() {
     super.initState();
@@ -47,6 +53,8 @@ class _MypageScreenState extends State<MypageScreen> {
     });
   }
 
+  /// 활동 섹션 탭 핸들러 — 동일 섹션 재탭 시 무시
+  /// 섹션 인덱스에 따라 [MypageProvider]의 해당 fetch 메서드 호출
   void _onSectionTap(int index) {
     if (_selectedSection == index) return;
     setState(() => _selectedSection = index);
@@ -60,6 +68,8 @@ class _MypageScreenState extends State<MypageScreen> {
     }
   }
 
+  /// 로그아웃 확인 다이얼로그 표시
+  /// 확인 시 [AuthProvider.logout] 호출
   void _showLogoutDialog() {
     showDialog(
       context: context,
@@ -100,29 +110,56 @@ class _MypageScreenState extends State<MypageScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock_outline, size: 80, color: Colors.grey.shade400),
+              Icon(Icons.lock_outline, size: 100, color: Colors.grey.shade400),
               const SizedBox(height: 20),
-              Text('로그인이 필요해요!',
+              Text('로그인이 필요해요',
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                       color: Colors.grey.shade600)),
               const SizedBox(height: 24),
-              ElevatedButton.icon(
+              ElevatedButton(
                 onPressed: () => showLoginModal(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 18, vertical: 13),
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(Colors.white),
+                  foregroundColor: WidgetStateProperty.all(AppColors.primary),
+                  overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                    if (states.contains(WidgetState.hovered)) {
+                      return AppColors.primary.withValues(alpha: 0.08);
+                    }
+                    if (states.contains(WidgetState.pressed)) {
+                      return AppColors.primary.withValues(alpha: 0.15);
+                    }
+                    return Colors.transparent;
+                  }),
+                  shape: WidgetStateProperty.all(RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: const BorderSide(color: AppColors.primary, width: 2),
+                  )),
+                  padding: WidgetStateProperty.all(
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                  ),
+                  elevation: WidgetStateProperty.all(0),
+                  shadowColor: WidgetStateProperty.all(Colors.transparent),
                 ),
-                icon: const Icon(Icons.login_rounded, color: Colors.white, size: 18),
-                label: const Text('로그인하기',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/images/psik_text_logo.svg',
+                      height: 36,
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      '로그인',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -155,9 +192,9 @@ class _MypageScreenState extends State<MypageScreen> {
               // ── 프로필 헤더 ──
               _buildProfileHeader(provider),
 
-              // ── 30일 다이어리 그래프 ──
+              // ── 30일 다이어리 그래프 — 피부점수/수면/수분 3개 라인 차트 ──
               if (provider.recentDiaries.isNotEmpty)
-                _DiaryStatsSection(diaries: provider.recentDiaries),
+                MypageDiaryStatsSection(diaries: provider.recentDiaries),
 
               const SizedBox(height: 8),
               const Padding(
@@ -217,6 +254,27 @@ class _MypageScreenState extends State<MypageScreen> {
 
               const SizedBox(height: 16),
 
+              // ── 문의하기 ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => context.push('/inquiry'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textBody,
+                      backgroundColor: AppColors.surface,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('문의하기',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ),
+
               // ── 로그아웃 ──
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
@@ -242,6 +300,9 @@ class _MypageScreenState extends State<MypageScreen> {
     );
   }
 
+  /// 프로필 헤더 위젯 — 아바타 + 닉네임/이메일 + 프로필 수정 버튼
+  /// ADMIN 권한 보유 시 관리자 페이지 버튼 추가 표시
+  /// 프로필 수정 후 복귀 시 [MypageProvider.fetchMyInfo] 재조회
   Widget _buildProfileHeader(MypageProvider provider) {
     final member = provider.member;
     return Padding(
@@ -281,8 +342,9 @@ class _MypageScreenState extends State<MypageScreen> {
               ),
               OutlinedButton.icon(
                 onPressed: () async {
+                  final provider = context.read<MypageProvider>(); // await 전에 미리 캡처
                   await context.push('/profile-edit');
-                  if (context.mounted) context.read<MypageProvider>().fetchMyInfo();
+                  if (context.mounted) provider.fetchMyInfo();
                 },
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -317,6 +379,8 @@ class _MypageScreenState extends State<MypageScreen> {
     );
   }
 
+  /// 선택된 활동 섹션에 따라 콘텐츠 위젯 분기
+  /// 탭 로딩 중이면 로딩 인디케이터 표시
   Widget _buildSelectedContent(MypageProvider provider) {
     if (provider.isTabLoading) {
       return const Padding(
@@ -335,6 +399,8 @@ class _MypageScreenState extends State<MypageScreen> {
     }
   }
 
+  /// 게시글 목록 위젯 — 내 글 / 좋아요 / 댓글 단 글 섹션 공통 사용
+  /// 비어있으면 안내 문구 표시
   Widget _buildPostList(List<PostModel> posts) {
     if (posts.isEmpty) {
       return const Padding(
@@ -354,6 +420,8 @@ class _MypageScreenState extends State<MypageScreen> {
     );
   }
 
+  /// 내 댓글 목록 위젯 — 내용 + 좋아요 수 + 작성일 표시
+  /// 비어있으면 안내 문구 표시
   Widget _buildCommentList(List<CommentModel> comments) {
     if (comments.isEmpty) {
       return const Padding(
@@ -399,6 +467,9 @@ class _MypageScreenState extends State<MypageScreen> {
     );
   }
 
+  /// 샀어요 제품 목록 위젯 — 이미지 + 브랜드/이름/가격 표시
+  /// 탭 시 [ProductDetailScreen] (`/products/:id`)으로 이동
+  /// 비어있으면 안내 문구 표시
   Widget _buildOwnedProductList(List<ProductModel> products) {
     if (products.isEmpty) {
       return const Padding(
@@ -465,161 +536,13 @@ class _MypageScreenState extends State<MypageScreen> {
     );
   }
 
+  /// 댓글 작성 시간 상대 표시 헬퍼
+  /// 60분 미만 → N분 전 / 24시간 미만 → N시간 전 / 7일 미만 → N일 전 / 이상 → M.D 형식
   String _formatDate(DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime);
     if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
     if (diff.inHours < 24) return '${diff.inHours}시간 전';
     if (diff.inDays < 7) return '${diff.inDays}일 전';
     return '${dateTime.month}.${dateTime.day}';
-  }
-}
-
-// ── 30일 다이어리 그래프 섹션 (통합) ──
-class _DiaryStatsSection extends StatelessWidget {
-  final List<SkinDiaryResponse> diaries;
-
-  const _DiaryStatsSection({required this.diaries});
-
-  @override
-  Widget build(BuildContext context) {
-    final spots1 = <FlSpot>[]; // 피부점수
-    final spots2 = <FlSpot>[]; // 수면시간
-    final spots3 = <FlSpot>[]; // 물 섭취량
-    final now = DateTime.now();
-
-    for (final diary in diaries) {
-      final daysAgo = now.difference(diary.recordDate).inDays.toDouble();
-      final x = (30 - daysAgo).clamp(0.0, 30.0);
-      spots1.add(FlSpot(x, diary.skinScore.toDouble()));
-      spots2.add(FlSpot(x, ((diary.sleepTimeMinutes ?? 0) / 60.0)));
-      spots3.add(FlSpot(x, ((diary.waterIntakeMl ?? 0) / 1000.0)));
-    }
-
-    for (final s in [spots1, spots2, spots3]) {
-      s.sort((a, b) => a.x.compareTo(b.x));
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('최근 30일 피부 기록',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textTitle)),
-          const SizedBox(height: 8),
-
-          // 범례
-          Row(
-            children: [
-              _Legend(color: AppColors.primary, label: '피부점수'),
-              const SizedBox(width: 12),
-              _Legend(color: AppColors.textBody, label: '수면(h)'),
-              const SizedBox(width: 12),
-              _Legend(color: Color(0xFF0EA5E9), label: '수분(L)'),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          SizedBox(
-            height: 160,
-            child: diaries.isEmpty
-                ? const Center(
-                child: Text('기록 없음',
-                    style: TextStyle(color: AppColors.textSub2, fontSize: 13)))
-                : LineChart(
-              LineChartData(
-                minX: 0, maxX: 30, minY: 0, maxY: 12,
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 3,
-                  getDrawingHorizontalLine: (_) =>
-                  const FlLine(color: Color(0xFFE5E7EB), strokeWidth: 1),
-                ),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 10,
-                      getTitlesWidget: (value, meta) {
-                        if (value == 0) return const Text('30일 전', style: TextStyle(fontSize: 9, color: AppColors.textSub2));
-                        if (value == 30) return const Text('오늘', style: TextStyle(fontSize: 9, color: AppColors.textSub2));
-                        return const SizedBox();
-                      },
-                    ),
-                  ),
-                ),
-                lineBarsData: [
-                  _lineBar(spots: spots1, color: AppColors.primary),
-                  _lineBar(spots: spots2, color: AppColors.textBody),
-                  _lineBar(spots: spots3, color: const Color(0xFF0EA5E9)),
-                ],
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => const Color(0xFFF3F4F6),
-                    getTooltipItems: (touchedSpots) =>
-                        touchedSpots.map((spot) {
-                          final labels = ['점', '시간', 'L'];
-                          final unit = labels[spot.barIndex];
-                          return LineTooltipItem(
-                            '${spot.y.toStringAsFixed(1)}$unit',
-                            TextStyle(
-                              color: spot.bar.color,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                          );
-                        }).toList(),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  LineChartBarData _lineBar({required List<FlSpot> spots, required Color color}) {
-    return LineChartBarData(
-      spots: spots,
-      isCurved: true,
-      color: color,
-      barWidth: 2,
-      isStrokeCapRound: true,
-      dotData: FlDotData(
-        show: spots.length <= 10,
-        getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(
-          radius: 3,
-          color: color,
-          strokeColor: Colors.white,
-          strokeWidth: 1.5,
-        ),
-      ),
-      belowBarData: BarAreaData(show: false),
-    );
-  }
-}
-
-class _Legend extends StatelessWidget {
-  final Color color;
-  final String label;
-
-  const _Legend({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(width: 12, height: 3, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12))),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w500)),
-      ],
-    );
   }
 }

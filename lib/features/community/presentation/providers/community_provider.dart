@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/comment_model.dart';
 import '../../data/repositories/community_repository.dart';
+import 'package:image_picker/image_picker.dart';
 
 class CommunityProvider extends ChangeNotifier {
   final CommunityRepository _repository;
@@ -12,69 +13,67 @@ class CommunityProvider extends ChangeNotifier {
   bool isDetailLoading = false;
   bool isCommentsLoading = false;
 
-  List<PostModel> posts = [];
-  String currentSort = 'latest';
-  int _currentPage = 0;
-  bool hasMore = true;
-
   PostModel? currentPost;
   List<CommentModel> comments = [];
+  List<PostModel> hotPosts = [];
+  List<PostModel> newPosts = [];
+  List<PostModel> popularPosts = [];
+  List<PostModel> allPosts = [];
+  bool isHomeLoading = false;
+  bool isAllPostsLoading = false;
+  bool hasMoreAllPosts = true;
+  int _allPostsPage = 0;
+  String _currentListType = ''; // 'hot' | 'new' | 'popular'
 
   // ===================== 게시글 목록 =====================
 
-  Future<void> changeSortAndRefresh(String sort) async {
-    currentSort = sort;
-    await refreshPosts();
-  }
-
-  Future<void> refreshPosts() async {
-    _currentPage = 0;
-    hasMore = true;
-    isLoading = true;
+  Future<void> fetchHomePosts() async {
+    isHomeLoading = true;
     notifyListeners();
-
     try {
-      posts = await _repository.getPosts(sort: currentSort, page: 0);
-      _currentPage = 1;
-      hasMore = posts.length >= 20;
+      final data = await _repository.getHomePosts();
+      hotPosts = data['hot'] ?? [];
+      newPosts = data['newPosts'] ?? [];
+      popularPosts = data['popular'] ?? [];
     } catch (e) {
-      debugPrint("Error refreshing posts: $e");
+      debugPrint('홈 게시글 조회 실패: $e');
     } finally {
-      isLoading = false;
+      isHomeLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> loadMorePosts() async {
-    if (!hasMore || isLoading) return;
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      final newPosts = await _repository.getPosts(
-          sort: currentSort, page: _currentPage);
-      posts.addAll(newPosts);
-      _currentPage++;
-      hasMore = newPosts.length >= 20;
-    } catch (e) {
-      debugPrint("Error loading more posts: $e");
-    } finally {
-      isLoading = false;
-      notifyListeners();
+  Future<void> fetchAllPosts(String type, {bool refresh = false}) async {
+    if (refresh) {
+      _allPostsPage = 0;
+      hasMoreAllPosts = true;
+      allPosts = [];
+      _currentListType = type;
     }
-  }
+    if (!hasMoreAllPosts || isAllPostsLoading) return;
 
-  Future<void> searchPosts(String keyword) async {
-    isLoading = true;
+    isAllPostsLoading = true;
     notifyListeners();
 
     try {
-      posts = await _repository.searchPosts(keyword);
-      hasMore = false;
+      List<PostModel> newPosts;
+      switch (type) {
+        case 'hot':
+          newPosts = await _repository.getHotPosts(page: _allPostsPage);
+          break;
+        case 'popular':
+          newPosts = await _repository.getPopularPosts(page: _allPostsPage);
+          break;
+        default: // 'new'
+          newPosts = await _repository.getNewPosts(page: _allPostsPage);
+      }
+      allPosts.addAll(newPosts);
+      _allPostsPage++;
+      hasMoreAllPosts = newPosts.length >= 20;
     } catch (e) {
-      debugPrint("Error searching posts: $e");
+      debugPrint('전체 게시글 조회 실패: $e');
     } finally {
-      isLoading = false;
+      isAllPostsLoading = false;
       notifyListeners();
     }
   }
@@ -96,40 +95,35 @@ class CommunityProvider extends ChangeNotifier {
     }
   }
 
-  Future<PostModel> createPost({
+  Future<void> createPost({
     required String title,
     required String content,
-    List<String>? imagePaths,
+    List<XFile>? imageFiles,
   }) async {
-    final post = await _repository.createPost(
+    await _repository.createPost(
       title: title,
       content: content,
-      imagePaths: imagePaths,
+      imageFiles: imageFiles,
     );
-    posts.insert(0, post);
     notifyListeners();
-    return post;
   }
 
   Future<void> updatePost(int postId, {
     required String title,
     required String content,
-    List<String>? imagePaths,
+    List<XFile>? imageFiles,
   }) async {
     currentPost = await _repository.updatePost(
       postId,
       title: title,
       content: content,
-      imagePaths: imagePaths,
+      imageFiles: imageFiles,
     );
-    final index = posts.indexWhere((p) => p.postId == postId);
-    if (index != -1) posts[index] = currentPost!;
     notifyListeners();
   }
 
   Future<void> deletePost(int postId) async {
     await _repository.deletePost(postId);
-    posts.removeWhere((p) => p.postId == postId);
     currentPost = null;
     notifyListeners();
   }
@@ -143,14 +137,6 @@ class CommunityProvider extends ChangeNotifier {
       if (currentPost != null && currentPost!.postId == postId) {
         currentPost = currentPost!.copyWith(
           likeCount: currentPost!.likeCount + (liked ? 1 : -1),
-          likedByMe: liked,
-        );
-      }
-
-      final index = posts.indexWhere((p) => p.postId == postId);
-      if (index != -1) {
-        posts[index] = posts[index].copyWith(
-          likeCount: posts[index].likeCount + (liked ? 1 : -1),
           likedByMe: liked,
         );
       }

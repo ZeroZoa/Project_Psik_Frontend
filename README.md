@@ -1,4 +1,4 @@
-# skinner_frontend
+# psik_frontend
 
 A new Flutter project.
 

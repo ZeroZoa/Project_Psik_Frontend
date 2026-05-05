@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
@@ -31,6 +32,56 @@ class CommunityRepository {
     }
   }
 
+  //홈화면용 3개씩 조회 - (HOT, NEW, POPULAR)
+  Future<Map<String, List<PostModel>>> getHomePosts() async {
+    try {
+      final response = await _dio.get('/api/posts');
+      return {
+        'hot': (response.data['hot'] as List)
+            .map((e) => PostModel.fromJson(e)).toList(),
+        'newPosts': (response.data['newPosts'] as List)
+            .map((e) => PostModel.fromJson(e)).toList(),
+        'popular': (response.data['popular'] as List)
+            .map((e) => PostModel.fromJson(e)).toList(),
+      };
+    } catch (e) {
+      throw Exception('홈 게시글 조회 실패: $e');
+    }
+  }
+
+  Future<List<PostModel>> getHotPosts({int page = 0, int size = 20}) async {
+    try {
+      final response = await _dio.get('/api/posts/hot',
+          queryParameters: {'page': page, 'size': size});
+      final List<dynamic> content = response.data['content'];
+      return content.map((e) => PostModel.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception('HOT 게시글 조회 실패: $e');
+    }
+  }
+
+  Future<List<PostModel>> getNewPosts({int page = 0, int size = 20}) async {
+    try {
+      final response = await _dio.get('/api/posts/new',
+          queryParameters: {'page': page, 'size': size});
+      final List<dynamic> content = response.data['content'];
+      return content.map((e) => PostModel.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception('NEW 게시글 조회 실패: $e');
+    }
+  }
+
+  Future<List<PostModel>> getPopularPosts({int page = 0, int size = 20}) async {
+    try {
+      final response = await _dio.get('/api/posts/popular',
+          queryParameters: {'page': page, 'size': size});
+      final List<dynamic> content = response.data['content'];
+      return content.map((e) => PostModel.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception('POPULAR 게시글 조회 실패: $e');
+    }
+  }
+
   /// 게시글 상세 조회
   Future<PostModel> getPost(int postId) async {
     try {
@@ -45,10 +96,10 @@ class CommunityRepository {
   Future<PostModel> createPost({
     required String title,
     required String content,
-    List<String>? imagePaths,
+    List<XFile>? imageFiles,
   }) async {
     try {
-      final formData = await _buildPostFormData(title, content, imagePaths);
+      final formData = await _buildPostFormData(title, content, imageFiles);
 
       final response = await _dio.post(
         '/api/posts',
@@ -66,10 +117,10 @@ class CommunityRepository {
   Future<PostModel> updatePost(int postId, {
     required String title,
     required String content,
-    List<String>? imagePaths,
+    List<XFile>? imageFiles,
   }) async {
     try {
-      final formData = await _buildPostFormData(title, content, imagePaths);
+      final formData = await _buildPostFormData(title, content, imageFiles);
 
       final response = await _dio.put(
         '/api/posts/$postId',
@@ -215,13 +266,10 @@ class CommunityRepository {
   Future<FormData> _buildPostFormData(
       String title,
       String content,
-      List<String>? imagePaths,
+      List<XFile>? imageFiles,
       ) async {
     final formData = FormData();
 
-    // JSON part를 MultipartFile.fromString으로 보내야
-    // Spring @RequestPart("request")가 application/json으로 파싱 가능
-    // fields.add로 보내면 text/plain으로 전송돼서 Spring이 JSON 파싱 못 함
     final jsonString = jsonEncode({'title': title, 'content': content});
     formData.files.add(MapEntry(
       'request',
@@ -231,25 +279,33 @@ class CommunityRepository {
       ),
     ));
 
-    // 이미지 파일 part
-    if (imagePaths != null) {
-      for (final path in imagePaths) {
-        final file = File(path);
-        final filename = file.path.split('/').last;
+    if (imageFiles != null) {
+      for (final xfile in imageFiles) {
+        final filename = xfile.name;
 
         String mimeType = 'image/jpeg';
-        if (filename.endsWith('.png')) mimeType = 'image/png';
-        else if (filename.endsWith('.gif')) mimeType = 'image/gif';
-        else if (filename.endsWith('.webp')) mimeType = 'image/webp';
+        if (filename.endsWith('.png')) {
+          mimeType = 'image/png';
+        } else if (filename.endsWith('.gif')) {
+          mimeType = 'image/gif';
+        } else if (filename.endsWith('.webp')) {
+          mimeType = 'image/webp';
+        }
 
-        formData.files.add(MapEntry(
-          'images',
-          await MultipartFile.fromFile(
-            path,
-            filename: filename,
-            contentType: MediaType.parse(mimeType),
-          ),
-        ));
+        // Web: fromBytes / Mobile: fromFile
+        final multipartFile = kIsWeb
+            ? MultipartFile.fromBytes(
+          await xfile.readAsBytes(),
+          filename: filename,
+          contentType: MediaType.parse(mimeType),
+        )
+            : await MultipartFile.fromFile(
+          xfile.path,
+          filename: filename,
+          contentType: MediaType.parse(mimeType),
+        );
+
+        formData.files.add(MapEntry('images', multipartFile));
       }
     }
 

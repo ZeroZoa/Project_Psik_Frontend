@@ -5,10 +5,10 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = skinner_frontend
+PRODUCT_NAME = psik_frontend
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.skinnerFrontend
+PRODUCT_BUNDLE_IDENTIFIER = com.example.psikFrontend
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.

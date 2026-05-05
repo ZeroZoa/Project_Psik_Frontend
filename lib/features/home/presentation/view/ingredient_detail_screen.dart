@@ -11,12 +11,17 @@ import '../../data/models/ingredient_detail_model.dart';
 import '../../data/models/product_model.dart';
 import '../../data/repositories/cosmetics_repository.dart';
 
+/// 성분 타입별 색상 테마 타입 정의
+/// [lightBg] 배경색, [textColor] 텍스트/뱃지 색, [gradient] 그라디언트 색상 리스트
 typedef IngredientTheme = ({
 Color lightBg,
 Color textColor,
 List<Color> gradient
 });
 
+/// 성분 상세 정보 화면 진입점
+/// - [ingredientId]로 [CosmeticsRepository.getIngredientDetail] 호출
+/// - 로딩 / 에러 / 정상 상태 분기 처리
 class IngredientDetailScreen extends StatefulWidget {
   final int ingredientId;
 
@@ -26,6 +31,8 @@ class IngredientDetailScreen extends StatefulWidget {
   State<IngredientDetailScreen> createState() => _IngredientDetailScreenState();
 }
 
+/// [IngredientDetailScreen]의 State — 성분 상세 데이터 로드 및 상태 관리
+/// 관리 상태: _detail(성분 상세), _isLoading, _error
 class _IngredientDetailScreenState extends State<IngredientDetailScreen> {
   IngredientDetailModel? _detail;
   bool _isLoading = true;
@@ -37,6 +44,8 @@ class _IngredientDetailScreenState extends State<IngredientDetailScreen> {
     _load();
   }
 
+  /// 성분 상세 데이터 로드 — [CosmeticsRepository.getIngredientDetail] 호출
+  /// 실패 시 _error 메시지 설정, RefreshIndicator의 onRefresh로도 재사용
   Future<void> _load() async {
     try {
       final repo = context.read<CosmeticsRepository>();
@@ -55,6 +64,9 @@ class _IngredientDetailScreenState extends State<IngredientDetailScreen> {
     }
   }
 
+  /// 성분 타입 표시명 → [IngredientTheme] 색상 테마 매핑
+  /// - 일반/화장품: 그린, 일반의약품/약국: 블루
+  /// - 전문의약품/병원: 레드, 기타(해외직구 등): 인디고
   IngredientTheme _getTheme(String typeTitle) {
     switch (typeTitle) {
       case '일반/화장품':
@@ -147,11 +159,6 @@ class _IngredientDetailScreenState extends State<IngredientDetailScreen> {
                       _EffectsCard(effects: detail.effects, theme: theme),
                       const SizedBox(height: 24),
                     ],
-
-                    if (detail.skinConcerns.isNotEmpty) ...[
-                      _SkinConcernsSection(concerns: detail.skinConcerns),
-                      const SizedBox(height: 20),
-                    ],
                   ],
                 ),
               ),
@@ -162,6 +169,7 @@ class _IngredientDetailScreenState extends State<IngredientDetailScreen> {
     );
   }
 
+  /// 데이터 로드 중 표시하는 전체 화면 로딩 위젯
   Widget _buildLoading() {
     return const Scaffold(
       backgroundColor: Color(0xFFF5F7F9),
@@ -171,6 +179,7 @@ class _IngredientDetailScreenState extends State<IngredientDetailScreen> {
     );
   }
 
+  /// 에러 발생 시 안내 + 재시도 버튼을 표시하는 전체 화면 위젯
   Widget _buildError() {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F9),
@@ -217,6 +226,7 @@ class _IngredientDetailScreenState extends State<IngredientDetailScreen> {
     );
   }
 
+  /// 스크롤 시 고정되는 SliverAppBar — 뒤로가기 버튼 + "성분 정보" 타이틀
   SliverAppBar _buildAppBar() {
     return SliverAppBar(
       backgroundColor: Colors.white,
@@ -241,7 +251,9 @@ class _IngredientDetailScreenState extends State<IngredientDetailScreen> {
   }
 }
 
-// ── 공통 카드 컨테이너 ──
+/// 공통 카드 컨테이너 위젯 — 둥근 모서리 + 그림자
+/// [color], [padding] 커스터마이징 가능
+/// [_SummaryCard], [_EffectsCard], [_CautionsCard] 에서 재사용
 class _BaseCard extends StatelessWidget {
   final Widget child;
   final Color? color;
@@ -274,7 +286,8 @@ class _BaseCard extends StatelessWidget {
   }
 }
 
-// ── 요약 카드 ──
+/// 성분 요약 카드 — 타입 뱃지 + 한/영 성분명 + 효과 요약 + 상세 설명
+/// [theme]으로 타입별 색상 적용
 class _SummaryCard extends StatelessWidget {
   final IngredientDetailModel detail;
   final IngredientTheme theme;
@@ -436,7 +449,9 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-// ── 효과 카드 ──
+/// 핵심 효과 칩 가로 스크롤 카드
+/// - 스크롤 위치에 따라 인디케이터 자동 업데이트 (StatefulWidget)
+/// - 효과가 1개면 인디케이터 미표시
 class _EffectsCard extends StatefulWidget {
   final List<String> effects;
   final IngredientTheme theme;
@@ -447,6 +462,7 @@ class _EffectsCard extends StatefulWidget {
   State<_EffectsCard> createState() => _EffectsCardState();
 }
 
+/// [_EffectsCard]의 State — ScrollController 생명주기 및 현재 인덱스 관리
 class _EffectsCardState extends State<_EffectsCard> {
   final ScrollController _scrollController = ScrollController();
   int _currentIndex = 0;
@@ -581,73 +597,7 @@ class _EffectsCardState extends State<_EffectsCard> {
   }
 }
 
-// ── 피부 고민 섹션 ──
-class _SkinConcernsSection extends StatelessWidget {
-  final List<String> concerns;
-
-  const _SkinConcernsSection({required this.concerns});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                LucideIcons.thumbsUp,
-                size: 20,
-                color: AppColors.textTitle,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                '이런 분들께 추천해요',
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textTitle,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
-            children: concerns.map(
-                  (concern) => Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    '#',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textTitle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    concern,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textTitle,
-                    ),
-                  ),
-                ],
-              ),
-            ).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── 주의사항 카드 ──
+/// 주의사항 카드 — 빨간 배경 + 불릿 포인트 목록
 class _CautionsCard extends StatelessWidget {
   final List<String> cautions;
 
@@ -728,7 +678,9 @@ class _CautionsCard extends StatelessWidget {
   }
 }
 
-// ── 제품 카드 ──
+/// 추천 제품 리스트 아이템 카드 — 이미지 + 브랜드/이름/설명/가격 + 화살표
+/// 탭 시 [ProductDetailScreen] (`/products/:id`)으로 이동
+/// 마이페이지 제품 목록과 유사한 패턴 — 재사용 필요 시 공통 위젯으로 추출 가능
 class _ProductListCard extends StatelessWidget {
   final ProductModel product;
 

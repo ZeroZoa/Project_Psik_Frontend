@@ -6,6 +6,10 @@ import '../../../auth/domain/enums/skin_concern.dart';
 import '../../../home/data/repositories/cosmetics_repository.dart';
 import '../providers/admin_provider.dart';
 
+/// 성분 생성/수정 폼 화면 진입점
+/// - [ingredientId] null → 생성 모드, non-null → 수정 모드
+/// - Provider는 [AdminScreen]에서 [ChangeNotifierProvider.value]로 주입받음
+/// - 제출: [AdminProvider.createIngredient] / [AdminProvider.updateIngredient]
 class IngredientFormScreen extends StatefulWidget {
   final int? ingredientId;
 
@@ -15,6 +19,8 @@ class IngredientFormScreen extends StatefulWidget {
   State<IngredientFormScreen> createState() => _IngredientFormScreenState();
 }
 
+/// [IngredientFormScreen]의 State — 폼 입력값 및 생성/수정 로직 관리
+/// 관리 상태: 성분명, 타입, 효과요약, 설명, 효과목록, 주의사항, 피부고민
 class _IngredientFormScreenState extends State<IngredientFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -44,6 +50,8 @@ class _IngredientFormScreenState extends State<IngredientFormScreen> {
     if (widget.ingredientId != null) _loadExisting();
   }
 
+  /// 수정 모드 진입 시 기존 성분 데이터를 폼에 채워넣음
+  /// [CosmeticsRepository.getIngredientDetail] 호출 → 각 컨트롤러/상태에 바인딩
   Future<void> _loadExisting() async {
     setState(() => _isInitLoading = true);
     try {
@@ -67,6 +75,8 @@ class _IngredientFormScreenState extends State<IngredientFormScreen> {
     }
   }
 
+  /// 성분 타입 표시명 → enum value 문자열 변환
+  /// 백엔드 응답의 typeTitle을 드롭다운 value로 역매핑
   String _typeFromTitle(String title) {
     switch (title) {
       case '일반/화장품': return 'GENERAL';
@@ -87,6 +97,9 @@ class _IngredientFormScreenState extends State<IngredientFormScreen> {
     super.dispose();
   }
 
+  /// 폼 유효성 검사 후 생성/수정 API 호출
+  /// - 유효성 실패 또는 피부고민 미선택 시 조기 반환
+  /// - 성공 시 화면 pop + 스낵바, 실패 시 에러 스낵바
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedConcerns.isEmpty) {
@@ -328,6 +341,7 @@ class _IngredientFormScreenState extends State<IngredientFormScreen> {
     );
   }
 
+  /// 성분 폼 필드 상단 레이블 위젯 헬퍼
   Widget _label(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Text(text,
@@ -337,6 +351,8 @@ class _IngredientFormScreenState extends State<IngredientFormScreen> {
             color: AppColors.textTitle)),
   );
 
+  /// 폼 필드 공통 InputDecoration 헬퍼
+  /// enabled/focused/error 테두리 스타일 통일
   InputDecoration _deco(String hint) => InputDecoration(
     hintText: hint,
     filled: true,
@@ -363,6 +379,11 @@ class _IngredientFormScreenState extends State<IngredientFormScreen> {
   );
 }
 
+
+
+/// 효과 목록 / 주의사항 목록 공통 편집 위젯
+/// - 텍스트 입력 + 추가 버튼 + 항목 리스트 (삭제 가능)
+/// - [IngredientFormScreen]의 효과/주의사항 섹션에서 재사용
 class _ListEditor extends StatelessWidget {
   final List<String> items;
   final TextEditingController controller;

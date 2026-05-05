@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:universal_html/html.dart' as html;
 import '../../data/services/auth_service.dart';
@@ -15,6 +14,9 @@ class AuthProvider extends ChangeNotifier {
   // ── 사용자 정보 ──
   String _nickname = '';
   String get nickname => _nickname;
+
+  String? _memberUuid;
+  String? get memberUuid => _memberUuid;
 
   List<SkinConcern> _skinConcerns = [];
   List<SkinConcern> get skinConcerns => _skinConcerns;
@@ -76,7 +78,8 @@ class AuthProvider extends ChangeNotifier {
 
           _profileComplete = data['profileComplete'] as bool? ?? false;
           _nickname = data['nickname'] as String? ?? '';
-          _role = data['role'] as String?; // null이면 isAdmin → false 보장
+          _role = data['role'] as String?;
+          _memberUuid = data['uuid'] as String?;
 
           final rawConcerns = data['skinConcerns'] as List<dynamic>? ?? [];
           _skinConcerns = rawConcerns
@@ -144,6 +147,7 @@ class AuthProvider extends ChangeNotifier {
     _nickname = '';
     _skinConcerns = [];
     _role = null;
+    _memberUuid = null;
   }
 
   // ── 쿠키 파싱 헬퍼 ──

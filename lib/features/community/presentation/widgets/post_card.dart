@@ -6,8 +6,14 @@ import '../../data/models/post_model.dart';
 class PostCard extends StatelessWidget {
   final PostModel post;
   final VoidCallback onTap;
+  final bool isLast;  // ← 추가
 
-  const PostCard({super.key, required this.post, required this.onTap});
+  const PostCard({
+    super.key,
+    required this.post,
+    required this.onTap,
+    this.isLast = false,  // ← 기본값 false (기존 사용처 영향 없음)
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +26,9 @@ class PostCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+          border: isLast
+              ? null
+              : Border(bottom: BorderSide(color: Colors.grey.shade100)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,

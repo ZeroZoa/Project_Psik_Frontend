@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -8,9 +9,15 @@ import 'package:provider/provider.dart';
 import '../../../../common/theme/app_colors.dart';
 import '../../../../common/widgets/login_modal.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../home/data/models/product_model.dart';
+import '../../../home/data/repositories/member_product_repository.dart';
 import '../../data/models/skin_diary_request.dart';
 import '../providers/skin_analysis_provider.dart';
 import '../providers/skin_diary_provider.dart';
+import '../widgets/diary_date_selector.dart';
+import '../widgets/diary_slider_field.dart';
+import '../widgets/diary_analysis_card.dart';
+
 
 class SkinDiaryScreen extends StatefulWidget {
   const SkinDiaryScreen({super.key});
@@ -28,6 +35,8 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
   final List<int> _selectedProductIds = [];
   int _skinScore = 0;
   XFile? _selectedImage;
+  List<ProductModel> _searchedProducts = [];
+  bool _isProductSearchLoading = false;
 
   bool _slideForward = true;
 
@@ -41,6 +50,195 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
         _loadMonthlyRecords(_selectedDate);
       }
     });
+  }
+
+  Future<void> _searchProducts(String keyword) async {
+    setState(() => _isProductSearchLoading = true);
+    try {
+      final products = await context
+          .read<MemberProductRepository>()
+          .searchProducts(keyword: keyword.isEmpty ? null : keyword);
+      if (!mounted) return;
+      setState(() => _searchedProducts = products);
+    } catch (e) {
+      debugPrint('제품 검색 실패: $e');
+    } finally {
+      if (mounted) setState(() => _isProductSearchLoading = false);
+    }
+  }
+
+  Future<void> _openProductSearchSheet() async {
+    await _searchProducts('');
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.75,
+              maxChildSize: 0.95,
+              minChildSize: 0.5,
+              expand: false,
+              builder: (_, scrollController) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Column(
+                    children: [
+                      // 핸들
+                      Container(
+                        width: 40, height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const Text('화장품 선택',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      // 검색창
+                      TextField(
+                        onChanged: (value) async {
+                          await _searchProducts(value);
+                          setSheetState(() {});
+                        },
+                        decoration: InputDecoration(
+                          hintText: '제품명 또는 브랜드 검색',
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                          filled: true,
+                          fillColor: AppColors.surface,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // 선택된 제품 칩
+                      if (_selectedProductIds.isNotEmpty)
+                        SizedBox(
+                          height: 36,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            children: _searchedProducts
+                                .where((p) => _selectedProductIds.contains(p.id))
+                                .map((p) => Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: Chip(
+                                label: Text(p.name,
+                                    style: const TextStyle(fontSize: 12)),
+                                backgroundColor:
+                                AppColors.primary.withValues(alpha: 0.1),
+                                deleteIconColor: AppColors.primary,
+                                side: const BorderSide(color: AppColors.primary),
+                                onDeleted: () {
+                                  setState(() => _selectedProductIds.remove(p.id));
+                                  setSheetState(() {});
+                                },
+                              ),
+                            ))
+                                .toList(),
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      // 제품 목록
+                      Expanded(
+                        child: _isProductSearchLoading
+                            ? const Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.primary))
+                            : _searchedProducts.isEmpty
+                            ? const Center(
+                            child: Text('검색 결과가 없습니다.',
+                                style: TextStyle(
+                                    color: AppColors.textSub2)))
+                            : ListView.separated(
+                          controller: scrollController,
+                          itemCount: _searchedProducts.length,
+                          separatorBuilder: (_, __) =>
+                              Divider(color: Colors.grey.shade100, height: 1),
+                          itemBuilder: (context, index) {
+                            final product = _searchedProducts[index];
+                            final isSelected =
+                            _selectedProductIds.contains(product.id);
+                            return ListTile(
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  width: 44, height: 44,
+                                  color: AppColors.surface,
+                                  child: product.imageUrl != null
+                                      ? Image.network(product.imageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) =>
+                                      const Icon(Icons.shopping_bag,
+                                          color: Colors.grey))
+                                      : const Icon(Icons.shopping_bag,
+                                      color: Colors.grey),
+                                ),
+                              ),
+                              title: Text(product.name,
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600)),
+                              subtitle: product.brand != null
+                                  ? Text(product.brand!,
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSub2))
+                                  : null,
+                              trailing: isSelected
+                                  ? const Icon(Icons.check_circle,
+                                  color: AppColors.primary)
+                                  : const Icon(Icons.radio_button_unchecked,
+                                  color: Colors.grey),
+                              onTap: () {
+                                setState(() {
+                                  if (isSelected) {
+                                    _selectedProductIds.remove(product.id);
+                                  } else {
+                                    _selectedProductIds.add(product.id);
+                                  }
+                                });
+                                setSheetState(() {});
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                      // 확인 버튼
+                      Padding(
+                        padding: EdgeInsets.only(
+                            bottom: MediaQuery.of(context).padding.bottom + 16,
+                            top: 8),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('${_selectedProductIds.length}개 선택 완료',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -70,6 +268,10 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
         _selectedProductIds.clear();
         _selectedProductIds.addAll(diary.usedCosmetics.map((c) => c.id));
         _selectedImage = null;
+        // 기존 선택 제품을 _searchedProducts에 동기화 (칩 이름 표시용)
+        _searchedProducts = diary.usedCosmetics
+            .map((c) => ProductModel(id: c.id, name: c.name, brand: c.brand, imageUrl: c.imageUrl))
+            .toList();
       });
       if (!mounted) return;
       await context.read<SkinAnalysisProvider>().fetchAnalysis(diary.skinDiaryId);
@@ -194,10 +396,10 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock_outline, size: 80, color: Colors.grey.shade400),
+              Icon(Icons.lock_outline, size: 100, color: Colors.grey.shade400),
               const SizedBox(height: 20),
               Text(
-                '로그인이 필요해요!',
+                '로그인이 필요해요',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
@@ -205,22 +407,47 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              ElevatedButton.icon(
+              ElevatedButton(
                 onPressed: () => showLoginModal(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 13),
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(Colors.white),
+                  foregroundColor: WidgetStateProperty.all(AppColors.primary),
+                  overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                    if (states.contains(WidgetState.hovered)) {
+                      return AppColors.primary.withValues(alpha: 0.08);
+                    }
+                    if (states.contains(WidgetState.pressed)) {
+                      return AppColors.primary.withValues(alpha: 0.15);
+                    }
+                    return Colors.transparent;
+                  }),
+                  shape: WidgetStateProperty.all(RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: const BorderSide(color: AppColors.primary, width: 2),
+                  )),
+                  padding: WidgetStateProperty.all(
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                  ),
+                  elevation: WidgetStateProperty.all(0),
+                  shadowColor: WidgetStateProperty.all(Colors.transparent),
                 ),
-                icon: const Icon(Icons.login_rounded, color: Colors.white, size: 18),
-                label: const Text(
-                  '로그인하기',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/images/psik_text_logo.svg',
+                      height: 36,
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      '로그인',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -231,7 +458,6 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
 
     final diaryProvider = context.watch<SkinDiaryProvider>();
     final bool isLoading = diaryProvider.isLoading;
-    final List<dynamic> availableProducts = [];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -258,7 +484,11 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildDateSelector(diaryProvider),
+                      DiaryDateSelector(
+                        selectedDate: _selectedDate,
+                        recordedDays: diaryProvider.recordedDays,
+                        onDateChanged: _changeDate,
+                      ),
                       const SizedBox(height: 24),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
@@ -277,13 +507,12 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                           );
                         },
                         child: _buildRecordCard(
-                          availableProducts,
                           key: ValueKey<String>(
                             '${_selectedDate.year}-${_selectedDate.month}-${_selectedDate.day}',
                           ),
                         ),
                       ),
-                      _buildAnalysisCard(),
+                      const DiaryAnalysisCard(),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -293,82 +522,12 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
     );
   }
 
-  // =========================================================================
-  // 주간 날짜 선택기
-  // =========================================================================
-  Widget _buildDateSelector(SkinDiaryProvider provider) {
-    const List<String> weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-    final DateTime today = DateTime.now();
-    final DateTime startDay = _selectedDate.subtract(const Duration(days: 3));
-    final List<DateTime> displayDays =
-        List.generate(7, (index) => startDay.add(Duration(days: index)));
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: displayDays.map((date) {
-        final bool isSelected = date.year == _selectedDate.year &&
-            date.month == _selectedDate.month &&
-            date.day == _selectedDate.day;
-        final bool isToday = date.year == today.year &&
-            date.month == today.month &&
-            date.day == today.day;
-        final bool hasRecord = provider.recordedDays.contains(date.day) &&
-            date.month == _selectedDate.month &&
-            date.year == _selectedDate.year;
-
-        return GestureDetector(
-          onTap: () => _changeDate(date),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            width: 44,
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary : Colors.transparent,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  weekdays[date.weekday - 1],
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected
-                        ? Colors.white
-                        : (isToday ? AppColors.primary : AppColors.textSub2),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${date.day}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isSelected ? Colors.white : AppColors.textTitle,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: hasRecord ? 16 : 0,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.white : AppColors.primary,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
 
   // =========================================================================
   // 다이어리 기록 폼
   // =========================================================================
-  Widget _buildRecordCard(List<dynamic> availableProducts, {Key? key}) {
+  Widget _buildRecordCard({Key? key}) {
     final bool isToday = _selectedDate.year == DateTime.now().year &&
         _selectedDate.month == DateTime.now().month &&
         _selectedDate.day == DateTime.now().day;
@@ -404,7 +563,7 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
           const SizedBox(height: 24),
 
           // 1. 수면 시간
-          _buildSliderField(
+          DiarySliderField(
             icon: Icons.bedtime,
             iconColor: Colors.indigo.shade400,
             title: '수면 시간',
@@ -419,7 +578,7 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
           const SizedBox(height: 24),
 
           // 2. 물 섭취량
-          _buildSliderField(
+          DiarySliderField(
             icon: Icons.water_drop,
             iconColor: Colors.blue.shade400,
             title: '물 섭취량',
@@ -480,102 +639,43 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          if (availableProducts.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
+          GestureDetector(
+            onTap: _openProductSearchSheet,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(14)),
-              child: const Text('등록된 화장품이 없습니다.',
-                  style: TextStyle(color: Colors.grey, fontSize: 13)),
-            )
-          else
-            SizedBox(
-              height: 100,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: availableProducts.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final product = availableProducts[index];
-                  final isSelected = _selectedProductIds.contains(product.id);
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        if (isSelected) {
-                          _selectedProductIds.remove(product.id);
-                        } else {
-                          _selectedProductIds.add(product.id);
-                        }
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 90,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary.withValues(alpha: 0.1)
-                            : AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : Colors.transparent),
-                      ),
-                      child: Stack(
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle),
-                                clipBehavior: Clip.antiAlias,
-                                child: (product.imageUrl != null &&
-                                        product.imageUrl!.isNotEmpty)
-                                    ? Image.network(product.imageUrl!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) =>
-                                            const Icon(Icons.broken_image,
-                                                size: 16, color: Colors.grey))
-                                    : const Icon(Icons.shopping_bag,
-                                        size: 16, color: Colors.grey),
-                              ),
-                              const Spacer(),
-                              Text(
-                                product.name,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.w500,
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : AppColors.textBody,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                          if (isSelected)
-                            const Positioned(
-                              top: 0,
-                              right: 0,
-                              child: Icon(Icons.check_circle,
-                                  size: 16, color: AppColors.primary),
-                            )
-                        ],
-                      ),
-                    ),
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: _selectedProductIds.isEmpty
+                  ? const Row(
+                children: [
+                  Icon(Icons.search, size: 16, color: Colors.grey),
+                  SizedBox(width: 8),
+                  Text('제품을 검색해서 추가하세요',
+                      style: TextStyle(fontSize: 13, color: Colors.grey)),
+                ],
+              )
+                  : Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: _selectedProductIds.map((id) {
+                  final product =
+                      _searchedProducts.where((p) => p.id == id).firstOrNull;
+                  return Chip(
+                    label: Text(product?.name ?? '#$id',
+                        style: const TextStyle(fontSize: 12)),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    side: const BorderSide(color: AppColors.primary),
+                    deleteIconColor: AppColors.primary,
+                    onDeleted: () => setState(() => _selectedProductIds.remove(id)),
                   );
-                },
+                }).toList(),
               ),
             ),
+          ),
           const SizedBox(height: 24),
 
           // 5. 사진 & 피부 점수
@@ -626,7 +726,7 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                                           : Colors.grey),
                                   const SizedBox(height: 4),
                                   Text(
-                                    alreadyAnalyzed ? '분석 완료' : '피부 사진',
+                                    alreadyAnalyzed ? '분석 완료' : 'AI 피부 분석',
                                     style: TextStyle(
                                         fontSize: 12,
                                         color: alreadyAnalyzed
@@ -720,241 +820,6 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
           )
         ],
       ),
-    );
-  }
-
-  // =========================================================================
-  // 피부 분석 결과 카드
-  // =========================================================================
-  Widget _buildAnalysisCard() {
-    final analysisProvider = context.watch<SkinAnalysisProvider>();
-    final analysis = analysisProvider.analysis;
-
-    if (analysis == null) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.face_retouching_natural,
-                  color: AppColors.primary, size: 18),
-              SizedBox(width: 8),
-              Text(
-                'AI 피부 분석 결과',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textTitle,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // 분석 이미지
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Image.network(
-              analysis.imageUrl,
-              width: double.infinity,
-              height: 200,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                height: 200,
-                color: AppColors.surface,
-                child: const Center(
-                  child:
-                      Icon(Icons.broken_image, color: Colors.grey, size: 48),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // FAILED 상태
-          if (analysis.isFailed)
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.error_outline, color: AppColors.error, size: 18),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '분석에 실패했습니다. 얼굴이 잘 보이는 사진을 사용해주세요.',
-                      style: TextStyle(fontSize: 13, color: AppColors.error),
-                    ),
-                  ),
-                ],
-              ),
-            )
-
-          // COMPLETED 상태
-          else if (analysis.isCompleted) ...[
-            if (analysis.summary != null) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  analysis.summary!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            _buildAnalysisItem('여드름 점수', '${analysis.acneScore ?? 0}점',
-                analysis.acneScore ?? 0, AppColors.error),
-            _buildAnalysisItem('주름 점수', '${analysis.wrinkleScore ?? 0}점',
-                analysis.wrinkleScore ?? 0, Colors.orange),
-            _buildAnalysisItem('피부결 점수', '${analysis.toneScore ?? 0}점',
-                analysis.toneScore ?? 0, Colors.purple),
-            _buildAnalysisItem('유수분 점수', '${analysis.oilScore ?? 0}점',
-                analysis.oilScore ?? 0, Colors.blue),
-          ]
-
-          // PENDING 상태
-          else
-            const Center(
-              child: Column(
-                children: [
-                  CircularProgressIndicator(color: AppColors.primary),
-                  SizedBox(height: 12),
-                  Text('분석 중입니다...',
-                      style: TextStyle(color: AppColors.textSub2)),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // =========================================================================
-  // 분석 항목 한 줄 위젯
-  // =========================================================================
-  Widget _buildAnalysisItem(
-      String label, String value, int score, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textBody)),
-              Text(value,
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: color)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: score / 100,
-              minHeight: 6,
-              backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // =========================================================================
-  // 공통 슬라이더
-  // =========================================================================
-  Widget _buildSliderField({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required double value,
-    required String unit,
-    required double min,
-    required double max,
-    required int divisions,
-    required Color activeColor,
-    required ValueChanged<double> onChanged,
-  }) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 16, color: iconColor),
-                const SizedBox(width: 8),
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textBody)),
-              ],
-            ),
-            Text(
-              '${value.toStringAsFixed(value == value.truncateToDouble() ? 0 : 1)}$unit',
-              style: TextStyle(fontWeight: FontWeight.bold, color: activeColor),
-            )
-          ],
-        ),
-        const SizedBox(height: 8),
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 8,
-            activeTrackColor: activeColor,
-            inactiveTrackColor: Colors.grey.shade200,
-            thumbColor: Colors.white,
-            overlayColor: activeColor.withValues(alpha: 0.2),
-            thumbShape:
-                const RoundSliderThumbShape(enabledThumbRadius: 10, elevation: 2),
-            tickMarkShape: SliderTickMarkShape.noTickMark,
-          ),
-          child: Slider(
-            value: value,
-            min: min,
-            max: max,
-            divisions: divisions,
-            onChanged: onChanged,
-          ),
-        )
-      ],
     );
   }
 }

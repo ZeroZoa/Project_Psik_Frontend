@@ -1,4 +1,4 @@
-package com.example.skinner_frontend
+package com.example.psik_frontend
 
 import io.flutter.embedding.android.FlutterActivity
 

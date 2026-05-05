@@ -8,6 +8,9 @@ import '../../../home/data/models/ingredient_summary_model.dart';
 import '../../data/repositories/search_repository.dart';
 import '../providers/search_provider.dart';
 
+/// 검색 화면 진입점
+/// - [SearchProvider]를 생성해 [_SearchView]에 주입
+/// - 성분 / 게시글 통합 검색 지원
 class SearchScreen extends StatelessWidget {
   const SearchScreen({super.key});
 
@@ -20,6 +23,7 @@ class SearchScreen extends StatelessWidget {
   }
 }
 
+/// [SearchScreen]의 메인 뷰 — 검색창 + 결과 목록
 class _SearchView extends StatefulWidget {
   const _SearchView();
 
@@ -27,6 +31,7 @@ class _SearchView extends StatefulWidget {
   State<_SearchView> createState() => _SearchViewState();
 }
 
+/// [_SearchView]의 State — TextEditingController 생명주기 관리
 class _SearchViewState extends State<_SearchView> {
   final TextEditingController _controller = TextEditingController();
 
@@ -43,10 +48,10 @@ class _SearchViewState extends State<_SearchView> {
     final hasPosts = provider.postResults.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: Column(
         children: [
-          // ── 검색창 ──
+          // ── 검색창 — 입력 시 provider.search 호출, X 버튼으로 초기화 ──
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Container(
@@ -79,7 +84,7 @@ class _SearchViewState extends State<_SearchView> {
             ),
           ),
 
-          // ── 결과 ──
+          // ── 결과 영역 — 로딩 / 빈 키워드 / 결과 없음 / 결과 있음 4가지 상태 분기 ──
           Expanded(
             child: provider.isLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
@@ -99,7 +104,7 @@ class _SearchViewState extends State<_SearchView> {
             )
                 : ListView(
               children: [
-                // ── 성분 결과 ──
+                // ── 성분 결과 섹션 ──
                 if (hasIngredients) ...[
                   _SectionHeader(
                     label: '성분',
@@ -110,7 +115,7 @@ class _SearchViewState extends State<_SearchView> {
                   ),
                 ],
 
-                // ── 게시글 결과 ──
+                // ── 게시글 결과 섹션 ──
                 if (hasPosts) ...[
                   if (hasIngredients)
                     const Padding(
@@ -137,7 +142,8 @@ class _SearchViewState extends State<_SearchView> {
   }
 }
 
-// ── 섹션 헤더 ──
+/// 검색 결과 섹션 헤더 — 카테고리명 + 결과 건수 표시
+/// [_SearchViewState] build 내 성분 / 게시글 섹션에서 재사용
 class _SectionHeader extends StatelessWidget {
   final String label;
   final int count;
@@ -169,7 +175,8 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ── 성분 결과 아이템 ──
+/// 성분 검색 결과 아이템 — 한/영 성분명 + 타입 뱃지 + 피부 고민 태그 + 효과 요약
+/// 탭 시 [IngredientDetailScreen] (`/ingredients/:id`)으로 이동
 class _IngredientResultItem extends StatelessWidget {
   final IngredientSummaryModel item;
 

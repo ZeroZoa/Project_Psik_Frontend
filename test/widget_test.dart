@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 //import 'package:flutter/material.dart';
-//import 'package:skinner_frontend/main.dart';
-//import 'package:skinner_frontend/features/auth/presentation/providers/auth_provider.dart';
+//import 'package:psik_frontend/main.dart';
+//import 'package:psik_frontend/features/auth/presentation/providers/auth_provider.dart';
 
 // [Test Helper] 테스트용 가짜(Fake) Provider
 // 실제 AuthProvider를 쓰면 SecureStorage 등 설정할게 많아 에러가 나므로 껍데기만 만듭니다.
@@ -30,7 +30,7 @@ void main() {
     //final mockAuthProvider = FakeAuthProvider();
 
     // 2. 앱 실행 (가짜 Provider 주입하여 null 에러 해결)
-    //await tester.pumpWidget(SkinnerApp(authProvider: mockAuthProvider));
+    //await tester.pumpWidget(PsikApp(authProvider: mockAuthProvider));
 
     // 3. 검증: 앱이 켜지면 로딩 상태이므로 'CircularProgressIndicator'가 보여야 함
     //expect(find.byType(CircularProgressIndicator), findsOneWidget);

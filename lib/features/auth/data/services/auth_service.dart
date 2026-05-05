@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
-// [수정] dart:ui가 아닌 universal_html 사용 — 브라우저 API(window.location) 접근용
 import 'package:universal_html/html.dart' as html;
 
 class AuthService {
@@ -16,9 +14,11 @@ class AuthService {
   final FlutterSecureStorage _storage;
   final Logger _logger;
 
-  String get _baseUrl =>
-      dotenv.env['API_BASE_URL'] ??
-          (kIsWeb ? 'http://localhost:8080' : 'http://10.0.2.2:8080');
+  static const String _baseUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'http://localhost:8080',
+  );
+
 
   // ===================== 웹 로그인 (같은 창 리다이렉트) =====================
 

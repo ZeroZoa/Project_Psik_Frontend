@@ -10,6 +10,10 @@ import '../../../auth/domain/enums/skin_type.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mypage/data/repositories/member_repository.dart';
 
+/// 프로필 설정/수정 폼 화면 진입점
+/// - [isEditMode] false → 최초 프로필 설정 (닉네임/성별/출생연도/피부타입/피부고민)
+/// - [isEditMode] true  → 마이페이지 프로필 수정 (닉네임/피부고민만)
+/// - 제출: [MemberRepository.setupProfile] / [MemberRepository.updateNickname] + [MemberRepository.updateSkinConcerns]
 class ProfileSetupScreen extends StatefulWidget {
   final bool isEditMode;
 
@@ -19,6 +23,8 @@ class ProfileSetupScreen extends StatefulWidget {
   State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
 }
 
+/// [ProfileSetupScreen]의 State — 폼 입력값 및 닉네임 중복확인/제출 로직 관리
+/// 관리 상태: 닉네임, 출생연도, 성별, 피부타입, 피부고민(최대 3개), 닉네임 중복확인 결과
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nicknameController = TextEditingController();
@@ -35,6 +41,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   static const int _maxSkinConcerns = 3;
 
+  /// 수정 모드 진입 시 [AuthProvider]에서 기존 닉네임/피부고민을 폼에 바인딩
+  /// 기존 닉네임은 중복확인 통과 상태로 초기화
   @override
   void initState() {
     super.initState();
@@ -56,6 +64,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     super.dispose();
   }
 
+  /// 닉네임 중복 확인 — [MemberRepository.checkNicknameDuplicate] 호출
+  /// - 수정 모드에서 기존 닉네임과 동일하면 API 호출 없이 통과 처리
+  /// - 결과: _isNicknameAvailable (true/false/null)
   Future<void> _checkNickname() async {
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty || nickname.length < 2) return;
@@ -91,6 +102,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
   }
 
+  /// 폼 유효성 검사 후 생성/수정 API 호출
+  /// - 설정 모드: [MemberRepository.setupProfile] → [AuthProvider.onProfileSetupComplete] → /home 이동
+  /// - 수정 모드: 닉네임/피부고민 각각 업데이트 → pop → [AuthProvider.onSkinConcernsUpdated]
+  /// - pop을 notifyListeners() 보다 먼저 호출해야 redirect 루프 방지
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
 
@@ -171,6 +186,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 
+  /// 폼 섹션 상단 레이블 헬퍼 — 타이틀 + 필수 여부 표시(*)
   Widget _sectionTitle(String title, {bool required = true}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -198,6 +214,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 
+  /// 단일 선택 칩 위젯 헬퍼
+  /// 성별([Gender]), 피부타입([SkinType]), 피부고민([SkinConcern]) 섹션에서 공통 재사용
+  /// 선택 상태에 따라 색상/폰트 애니메이션 적용
   Widget _buildSelectChip({
     required String label,
     required bool isSelected,

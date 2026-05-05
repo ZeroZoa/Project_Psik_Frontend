@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -23,6 +22,7 @@ import 'features/diary/data/repositories/skin_diary_repository.dart';
 import 'features/diary/data/repositories/skin_analysis_repository.dart';
 import 'features/diary/presentation/providers/skin_analysis_provider.dart';
 import 'features/community/data/repositories/community_repository.dart';
+import 'features/mypage/data/repositories/inquiry_repository.dart';
 import 'features/mypage/data/repositories/member_repository.dart';
 
 // [Feature - Providers]
@@ -36,20 +36,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
 
-  // 환경변수 로드
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    debugPrint("Warning: .env file not found. Using default values.");
-  }
-
   // 보안 저장소
   const storage = FlutterSecureStorage(
     aOptions: AndroidOptions(resetOnError: true),
   );
 
   // Dio 설정
-  final baseUrl = dotenv.env['API_URL'] ?? 'http://localhost:8080';
+  const baseUrl = String.fromEnvironment('API_URL', defaultValue: 'http://localhost:8080');
 
   final dio = Dio(BaseOptions(
     baseUrl: baseUrl,
@@ -79,6 +72,7 @@ void main() async {
   final communityRepository = CommunityRepository(dio);
   final memberRepository = MemberRepository(dio);
   final searchRepository = SearchRepository(dio);
+  final inquiryRepository = InquiryRepository(dio);
 
 
   runApp(
@@ -124,6 +118,9 @@ void main() async {
         // ── Search  ──
         Provider<SearchRepository>.value(value: searchRepository),
 
+        // ── Inquiry  ──
+        Provider<InquiryRepository>.value(value: inquiryRepository),
+
         ChangeNotifierProvider<MypageProvider>(
           create: (_) => MypageProvider(
             memberRepository,
@@ -133,21 +130,21 @@ void main() async {
           ),
         ),
       ],
-      child: SkinnerApp(authProvider: authProvider),
+      child: PsikApp(authProvider: authProvider),
     ),
   );
 }
 
-class SkinnerApp extends StatefulWidget {
+class PsikApp extends StatefulWidget {
   final AuthProvider authProvider;
 
-  const SkinnerApp({super.key, required this.authProvider});
+  const PsikApp({super.key, required this.authProvider});
 
   @override
-  State<SkinnerApp> createState() => _SkinnerAppState();
+  State<PsikApp> createState() => _PsikAppState();
 }
 
-class _SkinnerAppState extends State<SkinnerApp> {
+class _PsikAppState extends State<PsikApp> {
   late final GoRouter _router;
 
   @override
@@ -159,7 +156,7 @@ class _SkinnerAppState extends State<SkinnerApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Psik',
+      title: '당신을 위한 피부 공식 · Psik',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

@@ -7,6 +7,10 @@ import '../../../home/data/models/product_model.dart';
 import '../../../home/data/repositories/cosmetics_repository.dart';
 import '../providers/admin_provider.dart';
 
+/// 특정 성분에 연결된 제품 관리 화면 진입점
+/// - [ingredientId] / [ingredientName]: [_IngredientTab]에서 주입
+/// - Provider는 [AdminScreen]에서 [ChangeNotifierProvider.value]로 주입받음
+/// - 연결된 제품 목록([CosmeticsRepository]) + 전체 제품 목록([AdminProvider]) 동시 로드
 class IngredientProductsScreen extends StatefulWidget {
   final int ingredientId;
   final String ingredientName;
@@ -22,6 +26,10 @@ class IngredientProductsScreen extends StatefulWidget {
       _IngredientProductsScreenState();
 }
 
+/// [IngredientProductsScreen]의 State — 제품 연결/해제 로직 관리
+/// 관리 상태: 성분 상세(_detail), 로딩 여부(_isLoading)
+/// - 연결된 제품: _detail.products (linkedProducts)
+/// - 연결 가능한 제품: adminProvider.products 중 미연결 항목 (unlinkableProducts)
 class _IngredientProductsScreenState
     extends State<IngredientProductsScreen> {
   IngredientDetailModel? _detail;
@@ -33,6 +41,8 @@ class _IngredientProductsScreenState
     _load();
   }
 
+  /// 성분 상세([CosmeticsRepository.getIngredientDetail]) +
+  /// 전체 제품 목록([AdminProvider.loadAllProducts]) 동시 로드
   Future<void> _load() async {
     setState(() => _isLoading = true);
     try {
@@ -55,6 +65,7 @@ class _IngredientProductsScreenState
     }
   }
 
+  /// 제품을 현재 성분에 연결 → [AdminProvider.linkProductToIngredient] 호출 후 새로고침
   Future<void> _link(ProductModel product) async {
     final provider = context.read<AdminProvider>();
     try {
@@ -68,6 +79,7 @@ class _IngredientProductsScreenState
     }
   }
 
+  /// 현재 성분에서 제품 연결 해제 → [AdminProvider.unlinkProductFromIngredient] 호출 후 새로고침
   Future<void> _unlink(ProductModel product) async {
     final provider = context.read<AdminProvider>();
     try {
@@ -166,7 +178,8 @@ class _IngredientProductsScreenState
   }
 }
 
-// ── 섹션 헤더 ──
+/// 섹션 헤더 위젯 — 좌측 컬러 바 + 타이틀 + 개수 뱃지
+/// [IngredientProductsScreen]의 '연결된 제품' / '연결 가능한 제품' 섹션에서 재사용
 class _SectionHeader extends StatelessWidget {
   final String title;
   final int count;
@@ -220,7 +233,8 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ── 빈 상태 ──
+/// 목록이 비었을 때 표시하는 안내 위젯
+/// [IngredientProductsScreen]의 연결된/연결 가능한 제품 섹션에서 재사용
 class _EmptyState extends StatelessWidget {
   final String message;
 
@@ -246,7 +260,10 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ── 제품 행 ──
+/// 제품 한 행 위젯 — 이미지 + 브랜드/이름 + 액션 버튼
+/// - 연결된 제품: actionLabel='해제', actionColor=error
+/// - 연결 가능한 제품: actionLabel='연결', actionColor=primary
+/// [IngredientProductsScreen]의 두 섹션에서 공통 재사용
 class _ProductRow extends StatelessWidget {
   final ProductModel product;
   final String actionLabel;
