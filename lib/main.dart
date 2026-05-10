@@ -15,7 +15,6 @@ import 'core/network/auth_interceptor.dart';
 
 // [Feature - Repositories]
 import 'features/admin/data/repositories/admin_repository.dart';
-import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/home/data/repositories/cosmetics_repository.dart';
 import 'features/home/data/repositories/member_product_repository.dart';
 import 'features/diary/data/repositories/skin_diary_repository.dart';
@@ -29,6 +28,7 @@ import 'features/mypage/data/repositories/member_repository.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
 import 'features/diary/presentation/providers/skin_diary_provider.dart';
 import 'features/community/presentation/providers/community_provider.dart';
+import 'features/mypage/presentation/providers/inquiry_provider.dart';
 import 'features/mypage/presentation/providers/mypage_provider.dart';
 import 'features/search/data/repositories/search_repository.dart';
 
@@ -83,9 +83,6 @@ void main() async {
 
         // ── Auth ──
         ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
-        Provider<AuthRepository>(
-          create: (_) => AuthRepository(dio, storage),
-        ),
 
         // ── Admin ──
         Provider<AdminRepository>(
@@ -120,6 +117,10 @@ void main() async {
 
         // ── Inquiry  ──
         Provider<InquiryRepository>.value(value: inquiryRepository),
+
+        ChangeNotifierProvider<InquiryProvider>(
+          create: (_) => InquiryProvider(inquiryRepository),
+        ),
 
         ChangeNotifierProvider<MypageProvider>(
           create: (_) => MypageProvider(
@@ -156,7 +157,7 @@ class _PsikAppState extends State<PsikApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: '당신을 위한 피부 공식 · Psik',
+      title: 'Psik | 당신을 위한 피부 공식',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

@@ -82,15 +82,17 @@ class PostCommentInput extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onSubmit,
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
+              Material(
+                color: AppColors.primary,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  onTap: onSubmit,
+                  customBorder: const CircleBorder(),
+                  hoverColor: Colors.black.withValues(alpha: 0.12),
+                  child: const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Icon(Icons.send, size: 18, color: Colors.white),
                   ),
-                  child: const Icon(Icons.send, size: 18, color: Colors.white),
                 ),
               ),
             ],

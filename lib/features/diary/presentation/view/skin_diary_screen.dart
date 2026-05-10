@@ -465,7 +465,14 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
         onHorizontalDragEnd: (details) {
           if (details.primaryVelocity == null) return;
           if (details.primaryVelocity! < -100) {
-            _changeDate(_selectedDate.add(const Duration(days: 1)));
+            // 앞으로 — 오늘 이후로 못 가게 막기
+            final next = _selectedDate.add(const Duration(days: 1));
+            final today = DateTime.now();
+            final todayNormalized = DateTime(today.year, today.month, today.day);
+            final nextNormalized = DateTime(next.year, next.month, next.day);
+            if (!nextNormalized.isAfter(todayNormalized)) {
+              _changeDate(next);
+            }
           } else if (details.primaryVelocity! > 100) {
             _changeDate(_selectedDate.subtract(const Duration(days: 1)));
           }
@@ -753,44 +760,51 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text('피부 점수',
-                          style:
-                              TextStyle(fontSize: 12, color: Colors.grey)),
+                          style: TextStyle(fontSize: 12, color: Colors.grey)),
                       const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(5, (index) {
                           int score = index + 1;
                           bool isActive = _skinScore >= score;
-                          return GestureDetector(
-                            onTap: () =>
-                                setState(() => _skinScore = score),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              margin:
-                                  const EdgeInsets.symmetric(horizontal: 2),
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: isActive
-                                    ? AppColors.primary
-                                    : Colors.grey.shade300,
-                                shape: BoxShape.circle,
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                '$score',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: isActive
-                                      ? Colors.white
-                                      : Colors.grey.shade600,
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                            child: ClipOval(
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => setState(() => _skinScore = score),
+                                  hoverColor: Colors.black.withValues(alpha: 0.95),
+                                  splashColor: Colors.transparent,
+                                  highlightColor: Colors.transparent,
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: isActive
+                                          ? AppColors.primary
+                                          : Colors.grey.shade300,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      '$score',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: isActive
+                                            ? Colors.white
+                                            : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           );
                         }),
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -810,6 +824,15 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
+                shadowColor: Colors.transparent,
+              ).copyWith(
+                overlayColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.hovered)) {
+                    return Colors.black.withValues(alpha: 0.12);
+                  }
+                  return Colors.transparent;
+                }),
+                elevation: WidgetStateProperty.all(0),
               ),
               child: const Text('기록 저장하기',
                   style: TextStyle(

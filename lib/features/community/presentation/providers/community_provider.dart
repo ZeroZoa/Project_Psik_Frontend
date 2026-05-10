@@ -56,20 +56,20 @@ class CommunityProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      List<PostModel> newPosts;
+      List<PostModel> fetchedPosts;
       switch (type) {
         case 'hot':
-          newPosts = await _repository.getHotPosts(page: _allPostsPage);
+          fetchedPosts = await _repository.getHotPosts(page: _allPostsPage);
           break;
         case 'popular':
-          newPosts = await _repository.getPopularPosts(page: _allPostsPage);
+          fetchedPosts = await _repository.getPopularPosts(page: _allPostsPage);
           break;
         default: // 'new'
-          newPosts = await _repository.getNewPosts(page: _allPostsPage);
+          fetchedPosts = await _repository.getNewPosts(page: _allPostsPage);
       }
-      allPosts.addAll(newPosts);
+      allPosts.addAll(fetchedPosts);
       _allPostsPage++;
-      hasMoreAllPosts = newPosts.length >= 20;
+      hasMoreAllPosts = fetchedPosts.length >= 20;
     } catch (e) {
       debugPrint('전체 게시글 조회 실패: $e');
     } finally {

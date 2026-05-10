@@ -14,24 +14,6 @@ class CommunityRepository {
 
   // ===================== 게시글 =====================
 
-  /// 게시글 목록 조회
-  Future<List<PostModel>> getPosts({
-    String sort = 'latest',
-    int page = 0,
-    int size = 20,
-  }) async {
-    try {
-      final response = await _dio.get(
-        '/api/posts',
-        queryParameters: {'sortBy': sort, 'page': page, 'size': size},
-      );
-      final List<dynamic> content = response.data['content'];
-      return content.map((json) => PostModel.fromJson(json)).toList();
-    } catch (e) {
-      throw Exception('게시글 목록 조회 실패: $e');
-    }
-  }
-
   //홈화면용 3개씩 조회 - (HOT, NEW, POPULAR)
   Future<Map<String, List<PostModel>>> getHomePosts() async {
     try {

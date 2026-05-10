@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../models/ingredient_summary_model.dart';
 import '../models/ingredient_detail_model.dart';
+import '../models/product_model.dart';
 
 class CosmeticsRepository {
   final Dio _dio;
@@ -26,6 +27,15 @@ class CosmeticsRepository {
       return IngredientDetailModel.fromJson(data);
     } catch (e) {
       throw Exception('성분 상세 조회 실패: $e');
+    }
+  }
+
+  Future<ProductModel> getProductById(int id) async {
+    try {
+      final response = await _dio.get('/api/products/$id');
+      return ProductModel.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      throw Exception('제품 조회 실패: $e');
     }
   }
 

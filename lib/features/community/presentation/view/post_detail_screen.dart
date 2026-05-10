@@ -75,6 +75,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   void _showPostOptions(BuildContext context, CommunityProvider provider, post) {
+    final auth = context.read<AuthProvider>();
+    final isOwner = auth.memberUuid != null && auth.memberUuid == post.authorUuid;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -87,7 +90,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 핸들
               Container(
                 width: 40,
                 height: 4,
@@ -97,30 +99,39 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              // 수정 버튼
-              // 수정 버튼
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    context.push('/community/write', extra: post);
-                  },
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  label: const Text('수정하기',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: AppColors.textBody,
-                    backgroundColor: Colors.grey.shade100,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+              // 수정 버튼 — 작성자인 경우에만 (관리자 본인 글 포함)
+              if (isOwner) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      context.push('/community/write', extra: post);
+                    },
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                    label: const Text('수정하기',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: AppColors.textBody,
+                      backgroundColor: Colors.grey.shade100,
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ).copyWith(
+                      elevation: WidgetStateProperty.all(0),
+                      overlayColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.hovered)) {
+                          return Colors.black.withValues(alpha: 0.08);
+                        }
+                        return Colors.transparent;
+                      }),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              // 삭제 버튼
+                const SizedBox(height: 12),
+              ],
+              // 삭제 버튼 — 작성자 + 관리자 모두
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -136,9 +147,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     foregroundColor: AppColors.error,
                     backgroundColor: AppColors.error.withValues(alpha: 0.08),
                     elevation: 0,
+                    shadowColor: Colors.transparent,
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ).copyWith(
+                    elevation: WidgetStateProperty.all(0),
+                    overlayColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.hovered)) {
+                        return Colors.black.withValues(alpha: 0.08);
+                      }
+                      return Colors.transparent;
+                    }),
                   ),
                 ),
               ),
@@ -166,9 +185,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         actions: [
           if (post != null) Builder(
             builder: (context) {
-              final myUuid = context.read<AuthProvider>().memberUuid;
-              final isOwner = myUuid != null && myUuid == post.authorUuid;
-              if (!isOwner) return const SizedBox.shrink();
+              final auth = context.read<AuthProvider>();
+              final isOwner = auth.memberUuid != null && auth.memberUuid == post.authorUuid;
+              final isAdmin = auth.isAdmin;
+              if (!isOwner && !isAdmin) return const SizedBox.shrink();
               return IconButton(
                 icon: const Icon(Icons.more_vert),
                 onPressed: () => _showPostOptions(context, provider, post),

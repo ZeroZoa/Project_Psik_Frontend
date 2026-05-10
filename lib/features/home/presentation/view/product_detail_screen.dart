@@ -10,34 +10,70 @@ import '../../../../common/theme/app_colors.dart';
 import '../../../../common/widgets/login_modal.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/product_model.dart';
+import '../../data/repositories/cosmetics_repository.dart';
 import '../../data/repositories/member_product_repository.dart';
 
 /// 제품 상세 정보 화면 진입점
-/// - [product] GoRouter extra로 전달받은 [ProductModel]
+/// - [productId] 제품 ID (URL 경로 파라미터)
+/// - [product] GoRouter extra로 전달받은 [ProductModel] — null이면 API에서 직접 조회
 /// - 샀어요 여부 및 카운트는 진입 시 [MemberProductRepository.getOwnedStatus]로 별도 조회
 class ProductDetailScreen extends StatefulWidget {
-  final ProductModel product;
+  final int productId;
+  final ProductModel? product;
 
-  const ProductDetailScreen({super.key, required this.product});
+  const ProductDetailScreen({super.key, required this.productId, this.product});
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
 }
 
-/// [ProductDetailScreen]의 State — 샀어요 여부/카운트/로딩 상태 관리
-/// 관리 상태: _owned(샀어요 여부), _ownedCount(총 샀어요 수), _isLoading
+/// [ProductDetailScreen]의 State — 제품 데이터/샀어요 여부/카운트/로딩 상태 관리
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  ProductModel? _product;
+  bool _isLoadingProduct = false;
+  String? _productError;
+
   late bool _owned;
   late int _ownedCount;
   bool _isLoading = false;
 
-  /// product.ownedCount로 초기값 설정 후 인증 사용자면 실제 샀어요 상태 조회
   @override
   void initState() {
     super.initState();
     _owned = false;
-    _ownedCount = widget.product.ownedCount;
-    _fetchOwnedStatus();
+    _ownedCount = 0;
+    if (widget.product != null) {
+      // extra로 전달받은 경우 — API 조회 없이 바로 사용
+      _product = widget.product;
+      _ownedCount = widget.product!.ownedCount;
+      _fetchOwnedStatus();
+    } else {
+      // 딥링크/새로고침/브라우저 앞뒤로가기 등 extra가 없는 경우 — API에서 직접 조회
+      // setState 없이 직접 세팅 (initState 안에서는 첫 build 전이므로 setState 불필요)
+      _isLoadingProduct = true;
+      _loadProduct();
+    }
+  }
+
+  /// ID로 제품 정보 조회 — [CosmeticsRepository.getProductById] 호출
+  Future<void> _loadProduct() async {
+    try {
+      final repo = context.read<CosmeticsRepository>();
+      final product = await repo.getProductById(widget.productId);
+      if (!mounted) return;
+      setState(() {
+        _product = product;
+        _ownedCount = product.ownedCount;
+        _isLoadingProduct = false;
+      });
+      await _fetchOwnedStatus();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _productError = '제품 정보를 불러올 수 없습니다.';
+        _isLoadingProduct = false;
+      });
+    }
   }
 
   /// 샀어요 여부 + 총 카운트 조회 — [MemberProductRepository.getOwnedStatus] 호출
@@ -48,7 +84,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     try {
       final repo = context.read<MemberProductRepository>();
-      final result = await repo.getOwnedStatus(widget.product.id);
+      final result = await repo.getOwnedStatus(widget.productId);
       if (!mounted) return;
       setState(() {
         _owned = result.owned;
@@ -73,7 +109,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final result = await repo.markAsOwned(widget.product.id);
+      final result = await repo.markAsOwned(widget.productId);
       if (!mounted) return;
       setState(() {
         _owned = result.owned;
@@ -92,6 +128,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ── 제품 데이터 로딩 중 ──
+    if (_isLoadingProduct) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // ── 제품 데이터 오류 또는 null ──
+    if (_product == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text(_productError ?? '제품 정보를 불러올 수 없습니다.')),
+      );
+    }
+
+    final product = _product!;
     final currencyFormat = NumberFormat('#,###', 'ko_KR');
 
     return Scaffold(
@@ -149,10 +201,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(28),
-                        child: (widget.product.imageUrl != null &&
-                            widget.product.imageUrl!.isNotEmpty)
+                        child: (product.imageUrl != null &&
+                            product.imageUrl!.isNotEmpty)
                             ? Image.network(
-                          widget.product.imageUrl!,
+                          product.imageUrl!,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => const Center(
                             child: Icon(LucideIcons.shoppingBag,
@@ -198,10 +250,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (widget.product.brand != null &&
-                              widget.product.brand!.isNotEmpty) ...[
+                          if (product.brand != null &&
+                              product.brand!.isNotEmpty) ...[
                             Text(
-                              widget.product.brand!,
+                              product.brand!,
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -212,7 +264,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             const SizedBox(height: 6),
                           ],
                           Text(
-                            widget.product.name,
+                            product.name,
                             style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
@@ -221,7 +273,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               letterSpacing: -0.5,
                             ),
                           ),
-                          if (widget.product.price != null) ...[
+                          if (product.price != null) ...[
                             const SizedBox(height: 16),
                             const Divider(height: 1, color: Color(0xFFF3F4F6)),
                             const SizedBox(height: 16),
@@ -236,7 +288,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   ),
                                 ),
                                 Text(
-                                  '${currencyFormat.format(widget.product.price)}원',
+                                  '${currencyFormat.format(product.price)}원',
                                   style: const TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.w900,
@@ -252,8 +304,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     const SizedBox(height: 16),
 
                     // ── 제품 설명 카드 (설명이 있는 경우에만 표시) ──
-                    if (widget.product.description != null &&
-                        widget.product.description!.isNotEmpty)
+                    if (product.description != null &&
+                        product.description!.isNotEmpty)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(24),
@@ -295,7 +347,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              widget.product.description!,
+                              product.description!,
                               style: const TextStyle(
                                 fontSize: 15,
                                 color: AppColors.textBody,
@@ -411,10 +463,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               child: SizedBox(
                 height: 54,
                 child: ElevatedButton.icon(
-                  onPressed: (widget.product.link != null &&
-                      widget.product.link!.isNotEmpty)
+                  onPressed: (product.link != null && product.link!.isNotEmpty)
                       ? () async {
-                    final uri = Uri.parse(widget.product.link!);
+                    final uri = Uri.parse(product.link!);
                     if (await canLaunchUrl(uri)) {
                       await launchUrl(uri,
                           mode: LaunchMode.externalApplication);

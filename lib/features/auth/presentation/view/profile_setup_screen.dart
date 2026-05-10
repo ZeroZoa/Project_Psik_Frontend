@@ -574,7 +574,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       backgroundColor: AppColors.primary,
                       disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
                       elevation: 0,
+                      shadowColor: Colors.transparent,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ).copyWith(
+                      elevation: WidgetStateProperty.all(0),
+                      overlayColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.hovered)) {
+                          return Colors.black.withValues(alpha: 0.12);
+                        }
+                        return Colors.transparent;
+                      }),
                     ),
                     child: _isLoading
                         ? const SizedBox(

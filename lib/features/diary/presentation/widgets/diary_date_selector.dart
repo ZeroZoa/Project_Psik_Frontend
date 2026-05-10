@@ -12,7 +12,6 @@ class DiaryDateSelector extends StatelessWidget {
   final Set<int> recordedDays;
   final void Function(DateTime) onDateChanged;
 
-
   const DiaryDateSelector({
     super.key,
     required this.selectedDate,
@@ -23,8 +22,11 @@ class DiaryDateSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const List<String> weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-    final DateTime today = DateTime.now();
-    final DateTime startDay = selectedDate.subtract(const Duration(days: 3));
+    final DateTime now = DateTime.now();
+    // 시간 성분 제거 — 날짜 기준으로만 비교하기 위해 정규화
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final DateTime selectedNormalized = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final DateTime startDay = selectedNormalized.subtract(const Duration(days: 3));
     final List<DateTime> displayDays =
     List.generate(7, (index) => startDay.add(Duration(days: index)));
 
@@ -40,58 +42,68 @@ class DiaryDateSelector extends StatelessWidget {
         final bool hasRecord = recordedDays.contains(date.day) &&
             date.month == selectedDate.month &&
             date.year == selectedDate.year;
-        final bool isAfterToday = date.isAfter(DateTime(today.year, today.month, today.day));
+        final bool isAfterToday = date.isAfter(today);
 
-        return GestureDetector(
-          onTap: () {
-            final today = DateTime.now();
-            final isAfterToday = date.isAfter(DateTime(today.year, today.month, today.day));
-            if (!isAfterToday) onDateChanged(date);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            width: 44,
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary : Colors.transparent,
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: isAfterToday ? null : () => onDateChanged(date),
               borderRadius: BorderRadius.circular(14),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  weekdays[date.weekday - 1],
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isAfterToday
-                        ? Colors.grey.shade300
-                        : isSelected
-                        ? Colors.white
-                        : (isToday ? AppColors.primary : AppColors.textSub2),
-                  ),
+              hoverColor: isSelected
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.grey.withValues(alpha: 0.12),
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                width: 44,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  '${date.day}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isAfterToday
-                        ? Colors.grey.shade300
-                        : isSelected ? Colors.white : AppColors.textTitle,
-                  ),
+                child: Column(
+                  children: [
+                    Text(
+                      weekdays[date.weekday - 1],
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isAfterToday
+                            ? Colors.grey.shade300
+                            : isSelected
+                            ? Colors.white
+                            : (isToday ? AppColors.primary : AppColors.textSub2),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${date.day}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isAfterToday
+                            ? Colors.grey.shade300
+                            : isSelected
+                            ? Colors.white
+                            : AppColors.textTitle,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: hasRecord ? 16 : 0,
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: isSelected ? Colors.white : AppColors.primary,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: hasRecord ? 16 : 0,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.white : AppColors.primary,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         );

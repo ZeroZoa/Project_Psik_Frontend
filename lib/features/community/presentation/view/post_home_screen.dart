@@ -53,6 +53,11 @@ class _PostHomeScreenState extends State<PostHomeScreen> {
           if (context.mounted) context.push('/community/write');
         },
         backgroundColor: AppColors.primary,
+        elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 0,
+        highlightElevation: 0,
+        hoverColor: Colors.black.withValues(alpha: 0.12),
         child: const Icon(Icons.edit, color: Colors.white),
       ),
     );

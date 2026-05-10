@@ -28,47 +28,51 @@ class HomeProvider extends ChangeNotifier {
         final result = await _repository.getRecommendedIngredients(concerns);
 
         recommendedDetailMap = {};
-        final recommendedIds = <int>{};
-
         for (final concern in userSkinConcerns) {
           final summaries = result[concern.name] ?? [];
-          final details = <IngredientDetailModel>[];
-          for (final summary in summaries) {
-            try {
-              final detail = await _repository.getIngredientDetail(summary.id);
-              details.add(detail);
-              recommendedIds.add(summary.id);
-            } catch (e) {
-              debugPrint('[HomeProvider] 상세 로드 실패 (id=${summary.id}): $e');
-            }
-          }
-          recommendedDetailMap[concern] = details;
+          final results = await Future.wait(
+            summaries.map((s) async {
+              try {
+                return await _repository.getIngredientDetail(s.id);
+              } catch (e) {
+                debugPrint('[HomeProvider] 상세 로드 실패 (id=${s.id}): $e');
+                return null;
+              }
+            }),
+          );
+          recommendedDetailMap[concern] =
+              results.whereType<IngredientDetailModel>().toList();
         }
 
         // Psik 추천 성분 전체 노출 (로그인 유저도 전체 보여줌)
         final allSummaries = await _repository.getIngredients();
-
-        otherIngredientDetails = [];
-        for (final summary in allSummaries) {
-          try {
-            final detail = await _repository.getIngredientDetail(summary.id);
-            otherIngredientDetails.add(detail);
-          } catch (e) {
-            debugPrint('[HomeProvider] 기타 상세 로드 실패 (id=${summary.id}): $e');
-          }
-        }
+        final otherResults = await Future.wait(
+          allSummaries.map((s) async {
+            try {
+              return await _repository.getIngredientDetail(s.id);
+            } catch (e) {
+              debugPrint('[HomeProvider] 기타 상세 로드 실패 (id=${s.id}): $e');
+              return null;
+            }
+          }),
+        );
+        otherIngredientDetails =
+            otherResults.whereType<IngredientDetailModel>().toList();
       } else {
         // 비로그인 or 고민 미설정 → 전체 성분 로드
         final allSummaries = await _repository.getIngredients();
-        otherIngredientDetails = [];
-        for (final summary in allSummaries) {
-          try {
-            final detail = await _repository.getIngredientDetail(summary.id);
-            otherIngredientDetails.add(detail);
-          } catch (e) {
-            debugPrint('[HomeProvider] 전체 성분 로드 실패 (id=${summary.id}): $e');
-          }
-        }
+        final otherResults = await Future.wait(
+          allSummaries.map((s) async {
+            try {
+              return await _repository.getIngredientDetail(s.id);
+            } catch (e) {
+              debugPrint('[HomeProvider] 전체 성분 로드 실패 (id=${s.id}): $e');
+              return null;
+            }
+          }),
+        );
+        otherIngredientDetails =
+            otherResults.whereType<IngredientDetailModel>().toList();
       }
     } catch (e) {
       debugPrint('[HomeProvider] 로드 실패: $e');

@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -73,8 +71,7 @@ class AuthProvider extends ChangeNotifier {
       if (_isAuthenticated && _dio != null) {
         try {
           final response = await _dio!.get('/api/members/me');
-          final data =
-          jsonDecode(jsonEncode(response.data)) as Map<String, dynamic>;
+          final data = response.data as Map<String, dynamic>;
 
           _profileComplete = data['profileComplete'] as bool? ?? false;
           _nickname = data['nickname'] as String? ?? '';

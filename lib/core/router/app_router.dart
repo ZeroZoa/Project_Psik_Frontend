@@ -100,13 +100,11 @@ class AppRouter {
           path: '/products/:id',
           parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) {
+            final id = int.tryParse(state.pathParameters['id'] ?? '');
+            if (id == null) return const Scaffold(body: Center(child: Text('잘못된 접근입니다.')));
             final product = state.extra as ProductModel?;
-            if (product == null) {
-              return const Scaffold(
-                body: Center(child: Text('제품 정보를 불러올 수 없습니다.')),
-              );
-            }
-            return ProductDetailScreen(product: product);
+            // product가 null이면 ProductDetailScreen 내부에서 API 조회
+            return ProductDetailScreen(productId: id, product: product);
           },
         ),
 
@@ -186,16 +184,19 @@ class AppRouter {
                 ),
                 GoRoute(
                   path: 'hot',
+                  parentNavigatorKey: rootNavigatorKey,
                   builder: (context, state) =>
                       const PostListAllScreen(type: 'hot'),
                 ),
                 GoRoute(
                   path: 'new',
+                  parentNavigatorKey: rootNavigatorKey,
                   builder: (context, state) =>
                       const PostListAllScreen(type: 'new'),
                 ),
                 GoRoute(
                   path: 'popular',
+                  parentNavigatorKey: rootNavigatorKey,
                   builder: (context, state) =>
                       const PostListAllScreen(type: 'popular'),
                 ),
