@@ -163,7 +163,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         );
 
         if (!mounted) return;
-        authProvider.onProfileSetupComplete(_selectedSkinConcerns.toList());
+        authProvider.onProfileSetupComplete(
+          _selectedSkinConcerns.toList(),
+          _nicknameController.text.trim(),
+        );
         if (!mounted) return;
         context.go('/home');
       }

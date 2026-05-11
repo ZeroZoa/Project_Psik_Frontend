@@ -125,9 +125,10 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ── 프로필 설정 완료 후 상태 직접 업데이트 ──
-  void onProfileSetupComplete(List<SkinConcern> concerns) {
+  void onProfileSetupComplete(List<SkinConcern> concerns, String nickname) {
     _profileComplete = true;
     _skinConcerns = concerns;
+    _nickname = nickname;
     notifyListeners();
   }
 

@@ -23,6 +23,66 @@ import '../../features/community/presentation/view/post_write_screen.dart';
 import '../../features/community/data/models/post_model.dart';
 import '../../features/search/presentation/view/search_screen.dart';
 
+class _ShellScaffold extends StatefulWidget {
+  final Widget child;
+  final int currentIndex;
+  final bool isHome;
+
+  const _ShellScaffold({
+    required this.child,
+    required this.currentIndex,
+    required this.isHome,
+  });
+
+  @override
+  State<_ShellScaffold> createState() => _ShellScaffoldState();
+}
+
+class _ShellScaffoldState extends State<_ShellScaffold> {
+  bool _isNavBarVisible = true;
+
+  @override
+  void didUpdateWidget(_ShellScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      _isNavBarVisible = true; // 탭 전환 시 다시 표시
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    const navBarHeight = kBottomNavigationBarHeight;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: MainTopNavBar(isHome: widget.isHome),
+      body: NotificationListener<ScrollUpdateNotification>(
+        onNotification: (notification) {
+          final delta = notification.scrollDelta ?? 0;
+          if (delta > 3 && _isNavBarVisible) {
+            setState(() => _isNavBarVisible = false);
+          } else if (delta < -3 && !_isNavBarVisible) {
+            setState(() => _isNavBarVisible = true);
+          }
+          return false;
+        },
+        child: widget.child,
+      ),
+      bottomNavigationBar: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOut,
+        height: _isNavBarVisible ? navBarHeight + bottomPadding : 0.0,
+        child: OverflowBox(
+          alignment: Alignment.topCenter,
+          maxHeight: navBarHeight + bottomPadding,
+          child: MainBottomNavBar(currentIndex: widget.currentIndex),
+        ),
+      ),
+    );
+  }
+}
+
 class AppRouter {
   static final GlobalKey<NavigatorState> rootNavigatorKey =
       GlobalKey<NavigatorState>();
@@ -151,13 +211,10 @@ class AppRouter {
             else if (location.startsWith('/skin-diary')) currentIndex = 3;
             else if (location.startsWith('/mypage')) currentIndex = 4;
 
-            return Scaffold(
-              backgroundColor: Colors.white,
-              appBar: MainTopNavBar(isHome: location == '/home'),
-              body: child,
-              bottomNavigationBar: MainBottomNavBar(
-                currentIndex: currentIndex,
-              ),
+            return _ShellScaffold(
+              currentIndex: currentIndex,
+              isHome: location == '/home',
+              child: child,
             );
           },
           routes: [
