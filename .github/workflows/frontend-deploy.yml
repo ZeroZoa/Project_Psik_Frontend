@@ -23,7 +23,7 @@ jobs:
         run: flutter pub get
 
       - name: Build web
-        run: flutter build web --release
+        run: flutter build web --release --dart-define=API_URL=https://psik-backend-1078606124034.asia-northeast3.run.app
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
