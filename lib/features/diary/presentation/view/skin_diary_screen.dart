@@ -426,7 +426,7 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                     side: const BorderSide(color: AppColors.primary, width: 2),
                   )),
                   padding: WidgetStateProperty.all(
-                    const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   ),
                   elevation: WidgetStateProperty.all(0),
                   shadowColor: WidgetStateProperty.all(Colors.transparent),
