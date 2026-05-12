@@ -55,20 +55,18 @@ class AuthProvider extends ChangeNotifier {
         final uri = Uri.parse(html.window.location.href);
         final tokenFromUrl = uri.queryParameters['accessToken'];
         if (tokenFromUrl != null && tokenFromUrl.isNotEmpty) {
-          await _storage.write(key: 'accessToken', value: tokenFromUrl);
-          // 보안상 URL에서 토큰 제거
+          html.window.localStorage['accessToken'] = tokenFromUrl;
           html.window.history.replaceState(null, '', uri.path);
         }
-
         final cookieAccessToken = _getCookie('accessToken');
         if (cookieAccessToken != null) {
-          await _storage.write(key: 'accessToken', value: cookieAccessToken);
+          html.window.localStorage['accessToken'] = cookieAccessToken;
           html.document.cookie = "accessToken=; path=/; max-age=0";
         }
       }
-
-      final accessToken = await _storage.read(key: 'accessToken');
-
+      final accessToken = kIsWeb
+          ? html.window.localStorage['accessToken']
+          : await _storage.read(key: 'accessToken');
       if (kIsWeb) {
         _isAuthenticated = accessToken != null;
       } else {
@@ -120,6 +118,7 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('[AuthProvider] 로그아웃 API 실패 (무시): $e');
     }
     await _authService.logout();
+    if (kIsWeb) html.window.localStorage.remove('accessToken');
     _resetState();
     notifyListeners();
   }
@@ -127,6 +126,7 @@ class AuthProvider extends ChangeNotifier {
   // ── 강제 로그아웃 (토큰 만료/재발급 실패 시) ──
   Future<void> forceLogout() async {
     await _authService.logout();
+    if (kIsWeb) html.window.localStorage.remove('accessToken');
     _resetState();
     notifyListeners();
     debugPrint('[AuthProvider] 강제 로그아웃 → isAuthenticated = false');
@@ -165,7 +165,7 @@ class AuthProvider extends ChangeNotifier {
             (item) => item.trim().startsWith("$name="),
         orElse: () => "",
       );
-      return entity.isNotEmpty ? entity.split("=")[1] : null;
+      return entity.isNotEmpty ? entity.substring(entity.indexOf('=') + 1) : null;
     } catch (e) {
       return null;
     }

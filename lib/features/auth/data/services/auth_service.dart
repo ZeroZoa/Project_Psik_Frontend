@@ -43,6 +43,7 @@ class AuthService {
     await _storage.deleteAll();
 
     if (kIsWeb) {
+      html.window.localStorage.remove('accessToken');
       html.document.cookie = "accessToken=; path=/; max-age=0";
       html.document.cookie = "refreshToken=; path=/; max-age=0";
     }
