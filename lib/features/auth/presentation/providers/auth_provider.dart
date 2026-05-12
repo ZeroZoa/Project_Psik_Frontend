@@ -52,6 +52,14 @@ class AuthProvider extends ChangeNotifier {
   Future<void> checkLoginStatus() async {
     try {
       if (kIsWeb) {
+        final uri = Uri.parse(html.window.location.href);
+        final tokenFromUrl = uri.queryParameters['accessToken'];
+        if (tokenFromUrl != null && tokenFromUrl.isNotEmpty) {
+          await _storage.write(key: 'accessToken', value: tokenFromUrl);
+          // 보안상 URL에서 토큰 제거
+          html.window.history.replaceState(null, '', uri.path);
+        }
+
         final cookieAccessToken = _getCookie('accessToken');
         if (cookieAccessToken != null) {
           await _storage.write(key: 'accessToken', value: cookieAccessToken);
