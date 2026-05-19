@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../features/auth/domain/enums/skin_concern.dart';
 import '../../features/mypage/data/repositories/member_repository.dart';
 import '../theme/app_colors.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import 'login_modal.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 
 class MainTopNavBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isHome;
