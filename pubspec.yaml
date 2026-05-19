@@ -24,7 +24,7 @@ dependencies:
   universal_html: ^2.3.0
   image_picker: ^1.2.1
   url_launcher: ^6.3.2
-  lucide_icons_flutter: ^3.1.11
+  lucide_icons_flutter: ^3.1.14
   fl_chart: ^1.2.0
   http_parser: ^4.0.0
 
