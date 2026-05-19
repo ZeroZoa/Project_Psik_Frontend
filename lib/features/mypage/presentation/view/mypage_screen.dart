@@ -99,6 +99,48 @@ class _MypageScreenState extends State<MypageScreen> {
     );
   }
 
+  /// 회원 탈퇴 확인 다이얼로그 — 취소 불가 안내 포함
+  void _showWithdrawDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('회원 탈퇴',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          content: const Text(
+            '탈퇴하면 계정 정보와 개인 데이터가 삭제됩니다.\n작성한 게시글과 댓글은 "탈퇴한 사용자"로 표시되며 복구할 수 없습니다.',
+            style: TextStyle(fontSize: 14, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text('취소', style: TextStyle(color: Colors.grey.shade600)),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                final success = await context.read<AuthProvider>().withdraw();
+                if (context.mounted) {
+                  if (success) {
+                    context.go('/home');
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('탈퇴 처리 중 오류가 발생했습니다. 다시 시도해주세요.')),
+                    );
+                  }
+                }
+              },
+              child: const Text('탈퇴하기',
+                  style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAuthenticated = context.watch<AuthProvider>().isAuthenticated;
@@ -290,6 +332,25 @@ class _MypageScreenState extends State<MypageScreen> {
                     ),
                     child: const Text('로그아웃',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ),
+
+              // ── 회원 탈퇴 ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                child: Center(
+                  child: TextButton(
+                    onPressed: _showWithdrawDialog,
+                    child: const Text(
+                      '회원 탈퇴',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        decoration: TextDecoration.underline,
+                        decorationColor: Colors.grey,
+                      ),
+                    ),
                   ),
                 ),
               ),

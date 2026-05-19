@@ -123,6 +123,21 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── 회원 탈퇴 ──
+  Future<bool> withdraw() async {
+    try {
+      await _dio?.delete('/api/members/me');
+      await _authService.logout();
+      if (kIsWeb) html.window.localStorage.remove('accessToken');
+      _resetState();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('[AuthProvider] 회원 탈퇴 실패: $e');
+      return false;
+    }
+  }
+
   // ── 강제 로그아웃 (토큰 만료/재발급 실패 시) ──
   Future<void> forceLogout() async {
     await _authService.logout();
