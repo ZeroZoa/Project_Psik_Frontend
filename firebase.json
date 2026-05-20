@@ -8,6 +8,10 @@
     ],
     "rewrites": [
       {
+        "source": "/login/oauth2/code/**",
+        "function": "oauthProxy"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
@@ -31,5 +35,12 @@
         ]
       }
     ]
-  }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git"]
+    }
+  ]
 }
