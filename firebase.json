@@ -8,13 +8,6 @@
     ],
     "rewrites": [
       {
-        "source": "/login/oauth2/code/**",
-        "run": {
-          "serviceId": "psik-backend-1078606124034",
-          "region": "asia-northeast3"
-        }
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
