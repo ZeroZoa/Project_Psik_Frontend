@@ -207,7 +207,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           product.imageUrl!,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => const Center(
-                            child: Icon(LucideIcons.shoppingBag,
+                            child: Icon( LucideIcons.shoppingBag,
                                 size: 64, color: AppColors.textSub1),
                           ),
                           loadingBuilder: (context, child, progress) {

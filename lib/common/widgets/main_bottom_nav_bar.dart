@@ -50,8 +50,10 @@ class MainBottomNavBar extends StatelessWidget {
         backgroundColor: Colors.white,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textSub2,
-        showSelectedLabels: false,   // 추가
+        showSelectedLabels: false,
         showUnselectedLabels: false,  // 이미 있으면 false로 변경
+        selectedFontSize: 0,
+        unselectedFontSize: 0,
         elevation: 0,
         items: const [
           BottomNavigationBarItem(

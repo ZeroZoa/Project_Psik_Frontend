@@ -43,7 +43,7 @@ class MainTopNavBar extends StatelessWidget implements PreferredSizeWidget {
         if (!isAuthenticated)
           IconButton(
             color: AppColors.textSub2,
-            icon: Icon(LucideIcons.logIn),
+            icon: const Icon(LucideIcons.logIn),
             onPressed: () => showLoginModal(context),
           ),
       ],
