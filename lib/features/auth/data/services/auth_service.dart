@@ -19,6 +19,13 @@ class AuthService {
     defaultValue: 'http://localhost:8080',
   );
 
+  // OAuth 시작은 psik.kr 통해 프록시 (세션 쿠키 도메인 일치)
+  static const String _oauthBaseUrl = String.fromEnvironment(
+    'OAUTH_URL',
+    defaultValue: 'http://localhost:8080',
+  );
+
+
 
   // ===================== 웹 로그인 (같은 창 리다이렉트) =====================
 
@@ -26,14 +33,14 @@ class AuthService {
   /// 백엔드가 인증 성공 후 /home으로 리다이렉트 + 쿠키에 토큰 세팅
   void loginWithKakaoWeb() {
     if (kIsWeb) {
-      html.window.location.assign('$_baseUrl/oauth2/authorization/kakao');
+      html.window.location.assign('$_oauthBaseUrl/oauth2/authorization/kakao');
     }
   }
 
   /// 구글 로그인 — 같은 창에서 소셜 로그인 페이지로 이동
   void loginWithGoogleWeb() {
     if (kIsWeb) {
-      html.window.location.assign('$_baseUrl/oauth2/authorization/google');
+      html.window.location.assign('$_oauthBaseUrl/oauth2/authorization/google');
     }
   }
 

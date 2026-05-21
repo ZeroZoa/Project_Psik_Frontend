@@ -8,6 +8,10 @@
     ],
     "rewrites": [
       {
+        "source": "/oauth2/authorization/**",
+        "function": "oauthProxy"
+      },
+      {
         "source": "/login/oauth2/code/**",
         "function": "oauthProxy"
       },
