@@ -9,11 +9,17 @@
     "rewrites": [
       {
         "source": "/oauth2/authorization/**",
-        "function": "oauthProxy"
+        "run": {
+          "serviceId": "psik-backend",
+          "region": "asia-northeast3"
+        }
       },
       {
         "source": "/login/oauth2/code/**",
-        "function": "oauthProxy"
+        "run": {
+          "serviceId": "psik-backend",
+          "region": "asia-northeast3"
+        }
       },
       {
         "source": "**",
