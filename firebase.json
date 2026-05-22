@@ -9,15 +9,15 @@
     "rewrites": [
       {
         "source": "/oauth2/authorization/**",
-        "run": {
-          "serviceId": "psik-backend",
+        "function": {
+          "functionId": "oauthProxy",
           "region": "asia-northeast3"
         }
       },
       {
         "source": "/login/oauth2/code/**",
-        "run": {
-          "serviceId": "psik-backend",
+        "function": {
+          "functionId": "oauthProxy",
           "region": "asia-northeast3"
         }
       },
@@ -45,5 +45,12 @@
         ]
       }
     ]
-  }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git"]
+    }
+  ]
 }
