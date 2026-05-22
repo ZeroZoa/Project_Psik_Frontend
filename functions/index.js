@@ -1,11 +1,11 @@
-const {onRequest} = require("firebase-functions/https");
+const functions = require("firebase-functions");
 const https = require("https");
 
 const BACKEND_HOST = "psik-backend-1078606124034.asia-northeast3.run.app";
 
-exports.oauthProxy = onRequest(
-    {region: "asia-northeast3"},
-    (req, res) => {
+exports.oauthProxy = functions
+    .region("asia-northeast1")
+    .https.onRequest((req, res) => {
         const forwardHeaders = {...req.headers};
         forwardHeaders["host"] = BACKEND_HOST;
         forwardHeaders["x-forwarded-proto"] = "https";
@@ -38,5 +38,4 @@ exports.oauthProxy = onRequest(
         } else {
             proxyReq.end();
         }
-    }
-);
+    });

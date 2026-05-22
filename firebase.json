@@ -11,14 +11,14 @@
         "source": "/oauth2/authorization/**",
         "function": {
           "functionId": "oauthProxy",
-          "region": "asia-northeast3"
+          "region": "asia-northeast1"
         }
       },
       {
         "source": "/login/oauth2/code/**",
         "function": {
           "functionId": "oauthProxy",
-          "region": "asia-northeast3"
+          "region": "asia-northeast1"
         }
       },
       {
