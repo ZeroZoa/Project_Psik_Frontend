@@ -8,20 +8,6 @@
     ],
     "rewrites": [
       {
-        "source": "/oauth2/authorization/**",
-        "function": {
-          "functionId": "oauthProxy",
-          "region": "asia-northeast1"
-        }
-      },
-      {
-        "source": "/login/oauth2/code/**",
-        "function": {
-          "functionId": "oauthProxy",
-          "region": "asia-northeast1"
-        }
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
@@ -45,12 +31,5 @@
         ]
       }
     ]
-  },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": ["node_modules", ".git"]
-    }
-  ]
+  }
 }
