@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -81,60 +79,36 @@ class IngredientInfoCard extends StatelessWidget {
                   color: AppColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    const double effectFontSize = 13;
-
-                    final textPainter = TextPainter(
-                      text: TextSpan(
-                        text: detail.effectSummary,
-                        style: const TextStyle(
-                          fontSize: effectFontSize,
-                          fontWeight: FontWeight.w600,
-                          height: 1.5,
-                          letterSpacing: 0.1,
+                child: IntrinsicHeight(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 3, bottom: 3),
+                        width: 3,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      maxLines: 2,
-                      textDirection: ui.TextDirection.ltr,
-                    )..layout(
-                      maxWidth: constraints.maxWidth - 3 - 8 - 20,
-                    );
-
-                    final lineCount = textPainter.computeLineMetrics().length;
-                    final barHeight = lineCount >= 2 ? 33.0 : 17.0;
-
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 3),
-                          width: 3,
-                          height: barHeight,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(2),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          detail.effectSummary,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textBody,
+                            height: 1.5,
+                            letterSpacing: 0.1,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            detail.effectSummary,
-                            style: const TextStyle(
-                              fontSize: effectFontSize,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textBody,
-                              height: 1.5,
-                              letterSpacing: 0.1,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
