@@ -80,7 +80,8 @@ class IngredientInfoCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Container(
-                  padding: const EdgeInsets.only(left: 11),
+                  margin: const EdgeInsets.symmetric(vertical: 2),
+                  padding: const EdgeInsets.only(left: 7),
                   decoration: const BoxDecoration(
                     border: Border(
                       left: BorderSide(
