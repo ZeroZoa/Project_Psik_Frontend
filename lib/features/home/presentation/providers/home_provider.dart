@@ -5,7 +5,7 @@ import '../../data/repositories/cosmetics_repository.dart';
 
 class HomeProvider extends ChangeNotifier {
   final CosmeticsRepository _repository;
-  final List<SkinConcern> userSkinConcerns;
+  List<SkinConcern> userSkinConcerns;
 
   HomeProvider(this._repository, {required this.userSkinConcerns});
 
@@ -17,7 +17,11 @@ class HomeProvider extends ChangeNotifier {
   // Psik 추천 기타 성분 상세 목록
   List<IngredientDetailModel> otherIngredientDetails = [];
 
-  Future<void> init() async {
+  Future<void> init({List<SkinConcern>? updatedConcerns}) async {
+    if (updatedConcerns != null) {
+      userSkinConcerns = updatedConcerns;
+    }
+
     isLoading = true;
     notifyListeners();
 

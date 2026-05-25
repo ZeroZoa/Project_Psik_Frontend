@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
+import '../../../../common/widgets/refresh_circle_bar.dart';
 import '../providers/community_provider.dart';
 import '../widgets/post_card.dart';
 
@@ -69,36 +70,39 @@ class _PostListAllScreenState extends State<PostListAllScreen> {
       body: provider.isAllPostsLoading && provider.allPosts.isEmpty
           ? const Center(
           child: CircularProgressIndicator(color: AppColors.primary))
-          : RefreshIndicator(
-        onRefresh: () =>
-            provider.fetchAllPosts(widget.type, refresh: true),
-        color: AppColors.primary,
-        child: provider.allPosts.isEmpty
-            ? ListView(children: const [
-          SizedBox(height: 200),
-          Center(child: Text('게시글이 없습니다.')),
-        ])
-            : ListView.builder(
-          controller: _scrollController,
-          itemCount: provider.allPosts.length +
-              (provider.hasMoreAllPosts ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == provider.allPosts.length) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(
-                    child: CircularProgressIndicator(
-                        color: AppColors.primary)),
-              );
-            }
-            final post = provider.allPosts[index];
-            return PostCard(
-              post: post,
-              onTap: () =>
-                  context.push('/community/${post.postId}'),
-            );
-          },
-        ),
+          : CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+
+          RefreshCircleBar(
+            onRefresh: () => provider.fetchAllPosts(widget.type, refresh: true),
+          ),
+
+          if (provider.allPosts.isEmpty)
+            const SliverFillRemaining(
+              child: Center(child: Text('게시글이 없습니다.')),
+            )
+          else
+            SliverList.builder(
+              itemCount: provider.allPosts.length +
+                  (provider.hasMoreAllPosts ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == provider.allPosts.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(
+                        child: CircularProgressIndicator(
+                            color: AppColors.primary)),
+                  );
+                }
+                final post = provider.allPosts[index];
+                return PostCard(
+                  post: post,
+                  onTap: () => context.push('/community/${post.postId}'),
+                );
+              },
+            ),
+        ],
       ),
     );
   }
