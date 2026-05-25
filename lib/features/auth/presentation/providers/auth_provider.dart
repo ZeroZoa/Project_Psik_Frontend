@@ -75,38 +75,55 @@ class AuthProvider extends ChangeNotifier {
       }
 
       if (_isAuthenticated && _dio != null) {
-        try {
-          final response = await _dio!.get('/api/members/me');
-          final data = response.data as Map<String, dynamic>;
-
-          _profileComplete = data['profileComplete'] as bool? ?? false;
-          _nickname = data['nickname'] as String? ?? '';
-          _role = data['role'] as String?;
-          _memberUuid = data['uuid'] as String?;
-
-          final rawConcerns = data['skinConcerns'] as List<dynamic>? ?? [];
-          _skinConcerns = rawConcerns
-              .map((e) => SkinConcern.values.byName(e as String))
-              .toList();
-
-          debugPrint('[AuthProvider] role=$_role, isAdmin=$isAdmin');
-        } on DioException catch (e) {
-          debugPrint(
-              '[AuthProvider] /api/members/me 실패: ${e.response?.statusCode}');
-          await _authService.logout();
-          _resetState();
-        } catch (e) {
-          debugPrint('[AuthProvider] profileComplete 조회 실패: $e');
-          _profileComplete = false;
-          _skinConcerns = [];
-          _role = null;
-        }
+        await _fetchUserInfo();
       }
     } catch (e) {
       debugPrint('[AuthProvider] checkLoginStatus 실패: $e');
       _resetState();
     } finally {
       notifyListeners();
+    }
+  }
+
+  // ── 유저 정보 새로고침
+  Future<void> refreshUserInfo() async {
+    if (!_isAuthenticated || _dio == null) return;
+    try {
+      await _fetchUserInfo();
+      notifyListeners();
+    } on DioException catch (e) {
+      debugPrint('[AuthProvider] refreshUserInfo 실패: ${e.response?.statusCode}');
+    } catch (e) {
+      debugPrint('[AuthProvider] refreshUserInfo 실패: $e');
+    }
+  }
+
+// ── /api/members/me 공통 로직 ──
+  Future<void> _fetchUserInfo() async {
+    try {
+      final response = await _dio!.get('/api/members/me');
+      final data = response.data as Map<String, dynamic>;
+
+      _profileComplete = data['profileComplete'] as bool? ?? false;
+      _nickname = data['nickname'] as String? ?? '';
+      _role = data['role'] as String?;
+      _memberUuid = data['uuid'] as String?;
+
+      final rawConcerns = data['skinConcerns'] as List<dynamic>? ?? [];
+      _skinConcerns = rawConcerns
+          .map((e) => SkinConcern.values.byName(e as String))
+          .toList();
+
+      debugPrint('[AuthProvider] role=$_role, isAdmin=$isAdmin');
+    } on DioException catch (e) {
+      debugPrint('[AuthProvider] /api/members/me 실패: ${e.response?.statusCode}');
+      await _authService.logout();
+      _resetState();
+    } catch (e) {
+      debugPrint('[AuthProvider] profileComplete 조회 실패: $e');
+      _profileComplete = false;
+      _skinConcerns = [];
+      _role = null;
     }
   }
 

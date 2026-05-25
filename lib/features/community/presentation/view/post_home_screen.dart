@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
 import '../../../../common/widgets/login_modal.dart';
+import '../../../../common/widgets/refresh_circle_bar.dart';
 import '../providers/community_provider.dart';
 import '../widgets/post_home_section.dart';
 
@@ -34,18 +35,26 @@ class _PostHomeScreenState extends State<PostHomeScreen> {
       body: provider.isHomeLoading
           ? const Center(
           child: CircularProgressIndicator(color: AppColors.primary))
-          : RefreshIndicator(
-        onRefresh: () => provider.fetchHomePosts(),
-        color: AppColors.primary,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(42, 20, 42, 12),
-          children: [
-            PostHomeSection(title: '새로운 게시글', type: 'new', posts: provider.newPosts),
-            PostHomeSection(title: 'HOT 게시글', type: 'hot', posts: provider.hotPosts),
-            PostHomeSection(title: '많이 본 게시글', type: 'popular', posts: provider.popularPosts),
-            const SizedBox(height: 8),
-          ],
-        ),
+          : CustomScrollView(
+        slivers: [
+
+          RefreshCircleBar(
+            onRefresh: () => provider.fetchHomePosts(),
+          ),
+
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(42, 20, 42, 12),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                PostHomeSection(title: '새로운 게시글', type: 'new', posts: provider.newPosts),
+                PostHomeSection(title: 'HOT 게시글', type: 'hot', posts: provider.hotPosts),
+                PostHomeSection(title: '많이 본 게시글', type: 'popular', posts: provider.popularPosts),
+                const SizedBox(height: 8),
+              ]),
+            ),
+          ),
+
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
