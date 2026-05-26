@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /profile-setup
+Disallow: /profile-edit
+Disallow: /inquiry
+
+Sitemap: https://psik.kr/sitemap.xml
