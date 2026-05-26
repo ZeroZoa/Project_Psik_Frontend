@@ -10,7 +10,7 @@ import '../widgets/ingredient_info_card.dart';
 /// - [details] 해당 고민에 대한 성분 상세 목록 — 비어있으면 안내 문구 표시
 /// - [isFirst] true면 상단 Divider 생략 (첫 번째 섹션)
 /// - [_HomeView] SliverList 아이템으로 사용
-class HomeConcernSection extends StatelessWidget {
+class HomeConcernSection extends StatefulWidget {
   final SkinConcern concern;
   final List<IngredientDetailModel> details;
   final bool isFirst;
@@ -23,12 +23,19 @@ class HomeConcernSection extends StatelessWidget {
   });
 
   @override
+  State<HomeConcernSection> createState() => _HomeConcernSectionState();
+}
+
+class _HomeConcernSectionState extends State<HomeConcernSection> {
+  bool _isExpanded = true;
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 첫 번째 섹션이 아닐 때만 구분선 표시
-        if (!isFirst)
+        if (!widget.isFirst)
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 24),
             child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
@@ -52,7 +59,7 @@ class HomeConcernSection extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      concern.displayName,
+                      widget.concern.displayName,
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
@@ -72,44 +79,53 @@ class HomeConcernSection extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: AppColors.textSub2,
-                size: 20,
+              GestureDetector(
+                onTap: () => setState(() => _isExpanded = !_isExpanded),
+                child: AnimatedRotation(
+                  turns: _isExpanded ? 0 : 0.5,
+                  duration: const Duration(milliseconds: 200),
+                  child: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.textSub2,
+                    size: 20,
+                  ),
+                ),
               ),
               const SizedBox(width: 2),
             ],
           ),
         ),
         // 성분 목록 — 비어있으면 안내 문구
-        if (details.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Center(
-                child: Text(
-                  '추천 성분이 없습니다.',
-                  style: TextStyle(color: AppColors.textSub2),
+        if (_isExpanded) ...[
+          if (widget.details.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Center(
+                  child: Text(
+                    '추천 성분이 없습니다.',
+                    style: TextStyle(color: AppColors.textSub2),
+                  ),
                 ),
               ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(42, 0, 42, 12),
+              itemCount: widget.details.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 16),
+              itemBuilder: (context, index) {
+                return IngredientInfoCard(detail: widget.details[index]);
+              },
             ),
-          )
-        else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(42, 0, 42, 12),
-            itemCount: details.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              return IngredientInfoCard(detail: details[index]);
-            },
-          ),
+        ],
       ],
     );
   }
