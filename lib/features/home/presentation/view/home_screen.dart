@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
@@ -28,8 +27,15 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _HomeView extends StatelessWidget {
+class _HomeView extends StatefulWidget {
   const _HomeView();
+
+  @override
+  State<_HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<_HomeView> {
+  bool _isExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -134,34 +140,50 @@ class _HomeView extends StatelessWidget {
                       children: [
                         Container(
                           width: 3.5,
-                          height: 38,
+                          height: 24,
                           decoration: BoxDecoration(
                             color: AppColors.primary,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                         const SizedBox(width: 10),
-                        SvgPicture.asset(
-                          'assets/images/psik_text_logo.svg',
-                          height: 38,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          userSkinConcerns.isNotEmpty
-                              ? '이 추천하는 모든 성분'
-                              : '이 추천하는 피부공식',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.textTitle,
-                            letterSpacing: -0.3,
+                        RichText(
+                          text: TextSpan(
+                            children: [
+                              const TextSpan(
+                                text: 'Psik',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.textTitle,
+                                ),
+                              ),
+                              TextSpan(
+                                text: userSkinConcerns.isNotEmpty
+                                    ? '이 추천하는 모든 성분'
+                                    : '이 추천하는 성분',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.textTitle,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const Spacer(),
-                        const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: AppColors.textSub2,
-                          size: 20,
+                        GestureDetector(
+                          onTap: () => setState(() => _isExpanded = !_isExpanded),
+                          child: AnimatedRotation(
+                            turns: _isExpanded ? 0 : 0.5,
+                            duration: const Duration(milliseconds: 200),
+                            child: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: AppColors.textSub2,
+                              size: 20,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -169,22 +191,23 @@ class _HomeView extends StatelessWidget {
                 ],
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(42, 0, 42, 12),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: IngredientInfoCard(
-                        detail: provider.otherIngredientDetails[index],
-                      ),
-                    );
-                  },
-                  childCount: provider.otherIngredientDetails.length,
+            if (_isExpanded)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(42, 0, 42, 12),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: IngredientInfoCard(
+                          detail: provider.otherIngredientDetails[index],
+                        ),
+                      );
+                    },
+                    childCount: provider.otherIngredientDetails.length,
+                  ),
                 ),
               ),
-            ),
           ],
 
           const SliverToBoxAdapter(child: SizedBox(height: 48)),
