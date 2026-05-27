@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../home/data/models/ingredient_detail_model.dart';
 import '../../../home/data/models/ingredient_summary_model.dart';
 import '../../../home/data/models/product_model.dart';
 import '../../../home/data/repositories/cosmetics_repository.dart';
@@ -11,7 +12,7 @@ class AdminProvider extends ChangeNotifier {
 
   AdminProvider(this._adminRepository, this._cosmeticsRepository);
 
-  List<IngredientSummaryModel> ingredients = [];
+  List<IngredientDetailModel> ingredients = [];
   List<ProductModel> products = [];
   bool isIngredientsLoading = false;
   bool isProductsLoading = false;

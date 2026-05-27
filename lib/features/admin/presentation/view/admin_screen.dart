@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:psik_frontend/features/admin/presentation/view/product_form_screen.dart';
 
 import '../../../../common/theme/app_colors.dart';
-import '../../../home/data/models/ingredient_summary_model.dart';
+import '../../../home/data/models/ingredient_detail_model.dart';
 import '../../../home/data/models/product_model.dart';
 import '../../../home/data/repositories/cosmetics_repository.dart';
 import '../../../mypage/data/models/InquiryModel.dart';
@@ -176,8 +176,7 @@ class _IngredientTab extends StatelessWidget {
 /// - 성분명 + 타입 표시
 /// - 액션: 제품 연결([IngredientProductsScreen]), 수정([IngredientFormScreen]), 삭제(확인 다이얼로그)
 class _IngredientTile extends StatelessWidget {
-  final IngredientSummaryModel ingredient;
-
+  final IngredientDetailModel ingredient;
   const _IngredientTile({required this.ingredient});
 
   @override
@@ -267,7 +266,7 @@ class _IngredientTile extends StatelessWidget {
 
   ///성분 삭제 전 확인용 다이얼로그
   void _confirmDelete(BuildContext context, AdminProvider provider,
-      IngredientSummaryModel ingredient) {
+      IngredientDetailModel ingredient) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(

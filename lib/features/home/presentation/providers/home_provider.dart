@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../features/auth/domain/enums/skin_concern.dart';
 import '../../data/models/ingredient_detail_model.dart';
+import '../../data/models/ingredient_summary_model.dart';
 import '../../data/repositories/cosmetics_repository.dart';
 
 class HomeProvider extends ChangeNotifier {
@@ -27,56 +28,39 @@ class HomeProvider extends ChangeNotifier {
 
     try {
       if (userSkinConcerns.isNotEmpty) {
-        // 로그인 + 고민 설정된 유저 → 추천 성분 로드
         final concerns = userSkinConcerns.map((e) => e.name).toList();
-        final result = await _repository.getRecommendedIngredients(concerns);
 
+        // 추천 성분 + 전체 성분 병렬 조회
+        final results = await Future.wait([
+          _repository.getRecommendedIngredients(concerns),
+          _repository.getIngredients(), // ← 상세 직접 반환
+        ]);
+
+        final recommendedResult =
+        results[0] as Map<String, List<IngredientSummaryModel>>;
+        final allDetails = results[1] as List<IngredientDetailModel>;
+
+        // 추천 성분 개별 상세 조회
         recommendedDetailMap = {};
         for (final concern in userSkinConcerns) {
-          final summaries = result[concern.name] ?? [];
-          final results = await Future.wait(
+          final summaries = recommendedResult[concern.name] ?? [];
+          final detailResults = await Future.wait(
             summaries.map((s) async {
               try {
                 return await _repository.getIngredientDetail(s.id);
               } catch (e) {
-                debugPrint('[HomeProvider] 상세 로드 실패 (id=${s.id}): $e');
+                debugPrint('[HomeProvider] 추천 상세 로드 실패 (id=${s.id}): $e');
                 return null;
               }
             }),
           );
           recommendedDetailMap[concern] =
-              results.whereType<IngredientDetailModel>().toList();
+              detailResults.whereType<IngredientDetailModel>().toList();
         }
 
-        // Psik 추천 성분 전체 노출 (로그인 유저도 전체 보여줌)
-        final allSummaries = await _repository.getIngredients();
-        final otherResults = await Future.wait(
-          allSummaries.map((s) async {
-            try {
-              return await _repository.getIngredientDetail(s.id);
-            } catch (e) {
-              debugPrint('[HomeProvider] 기타 상세 로드 실패 (id=${s.id}): $e');
-              return null;
-            }
-          }),
-        );
-        otherIngredientDetails =
-            otherResults.whereType<IngredientDetailModel>().toList();
+        otherIngredientDetails = allDetails;
       } else {
-        // 비로그인 or 고민 미설정 → 전체 성분 로드
-        final allSummaries = await _repository.getIngredients();
-        final otherResults = await Future.wait(
-          allSummaries.map((s) async {
-            try {
-              return await _repository.getIngredientDetail(s.id);
-            } catch (e) {
-              debugPrint('[HomeProvider] 전체 성분 로드 실패 (id=${s.id}): $e');
-              return null;
-            }
-          }),
-        );
-        otherIngredientDetails =
-            otherResults.whereType<IngredientDetailModel>().toList();
+        otherIngredientDetails = await _repository.getIngredients();
       }
     } catch (e) {
       debugPrint('[HomeProvider] 로드 실패: $e');
