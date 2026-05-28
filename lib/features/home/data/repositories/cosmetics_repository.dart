@@ -9,12 +9,12 @@ class CosmeticsRepository {
 
   CosmeticsRepository(this._dio);
 
-  Future<List<IngredientSummaryModel>> getIngredients() async {
+  Future<List<IngredientDetailModel>> getIngredients() async {
     try {
       final response = await _dio.get('/api/ingredients');
       final data = jsonDecode(jsonEncode(response.data));
       final List<dynamic> content = data['content'];
-      return content.map((json) => IngredientSummaryModel.fromJson(json)).toList();
+      return content.map((json) => IngredientDetailModel.fromJson(json as Map<String, dynamic>)).toList();
     } catch (e) {
       throw Exception('성분 목록 조회 실패: $e');
     }
