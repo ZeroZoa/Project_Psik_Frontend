@@ -236,7 +236,6 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             final picker = ImagePicker();
             final picked = await picker.pickImage(
               source: ImageSource.gallery,
-              imageQuality: 80,
             );
             if (picked != null) {
               setState(() {
