@@ -768,7 +768,7 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                           int score = index + 1;
                           bool isActive = _skinScore >= score;
                           return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
                             child: ClipOval(
                               child: Material(
                                 color: Colors.transparent,
