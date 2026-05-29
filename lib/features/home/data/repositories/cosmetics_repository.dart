@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import '../models/ingredient_summary_model.dart';
 import '../models/ingredient_detail_model.dart';
 import '../models/product_model.dart';
 
@@ -39,7 +38,7 @@ class CosmeticsRepository {
     }
   }
 
-  Future<Map<String, List<IngredientSummaryModel>>> getRecommendedIngredients(
+  Future<Map<String, List<IngredientDetailModel>>> getRecommendedIngredients(
       List<String> skinConcerns) async {
     try {
       final response = await _dio.get(
@@ -54,7 +53,7 @@ class CosmeticsRepository {
         data.map((group) {
           final key = group['concern'] as String;
           final list = (group['ingredients'] as List<dynamic>)
-              .map((e) => IngredientSummaryModel.fromJson(e as Map<String, dynamic>))
+              .map((e) => IngredientDetailModel.fromJson(e as Map<String, dynamic>))
               .toList();
           return MapEntry(key, list);
         }),

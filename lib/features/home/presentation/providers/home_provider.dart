@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../features/auth/domain/enums/skin_concern.dart';
 import '../../data/models/ingredient_detail_model.dart';
-import '../../data/models/ingredient_summary_model.dart';
 import '../../data/repositories/cosmetics_repository.dart';
 
 class HomeProvider extends ChangeNotifier {
@@ -37,25 +36,12 @@ class HomeProvider extends ChangeNotifier {
         ]);
 
         final recommendedResult =
-        results[0] as Map<String, List<IngredientSummaryModel>>;
+        results[0] as Map<String, List<IngredientDetailModel>>;
         final allDetails = results[1] as List<IngredientDetailModel>;
 
-        // 추천 성분 개별 상세 조회
         recommendedDetailMap = {};
         for (final concern in userSkinConcerns) {
-          final summaries = recommendedResult[concern.name] ?? [];
-          final detailResults = await Future.wait(
-            summaries.map((s) async {
-              try {
-                return await _repository.getIngredientDetail(s.id);
-              } catch (e) {
-                debugPrint('[HomeProvider] 추천 상세 로드 실패 (id=${s.id}): $e');
-                return null;
-              }
-            }),
-          );
-          recommendedDetailMap[concern] =
-              detailResults.whereType<IngredientDetailModel>().toList();
+          recommendedDetailMap[concern] = recommendedResult[concern.name] ?? [];
         }
 
         otherIngredientDetails = allDetails;
