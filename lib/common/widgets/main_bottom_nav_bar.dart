@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material_symbols_icons/symbols.dart';
+
 import '../theme/app_colors.dart';
 
 class MainBottomNavBar extends StatelessWidget {
@@ -35,6 +36,19 @@ class MainBottomNavBar extends StatelessWidget {
     }
   }
 
+  Widget _icon(String path) => SvgPicture.asset(
+    'assets/icons/$path',
+    width: 24, height: 24,
+    colorFilter: const ColorFilter.mode(AppColors.textSub2, BlendMode.srcIn),
+  );
+
+  Widget _activeIcon(String path) => SvgPicture.asset(
+    'assets/icons/$path',
+    width: 24, height: 24,
+    colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+  );
+
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -55,27 +69,12 @@ class MainBottomNavBar extends StatelessWidget {
         selectedFontSize: 0,
         unselectedFontSize: 0,
         elevation: 0,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Symbols.home, size: 28),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Symbols.chat_bubble, size: 23),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Symbols.search, size: 27),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Symbols.list_alt, size: 26),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Symbols.person, size: 28),
-            label: '',
-          ),
+        items: [
+          BottomNavigationBarItem(icon: _icon('house.svg'),        activeIcon: _activeIcon('house.svg'),        label: ''),
+          BottomNavigationBarItem(icon: _icon('message-circle.svg'), activeIcon: _activeIcon('message-circle.svg'), label: ''),
+          BottomNavigationBarItem(icon: _icon('search.svg'),       activeIcon: _activeIcon('search.svg'),       label: ''),
+          BottomNavigationBarItem(icon: _icon('notebook.svg'),     activeIcon: _activeIcon('notebook.svg'),     label: ''),
+          BottomNavigationBarItem(icon: _icon('user-round.svg'),   activeIcon: _activeIcon('user-round.svg'),   label: ''),
         ],
       ),
     );

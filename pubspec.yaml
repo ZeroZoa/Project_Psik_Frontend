@@ -26,12 +26,9 @@ dependencies:
   url_launcher: ^6.3.2
   fl_chart: ^1.2.0
   http_parser: ^4.0.0
-  material_symbols_icons: ^4.2928.1
 
   flutter_localizations:
     sdk: flutter
-
-  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
@@ -45,3 +42,4 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/icons/
