@@ -61,7 +61,7 @@ class MainBottomNavBar extends StatelessWidget {
             label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Symbols.chat_bubble, size: 24),
+            icon: Icon(Symbols.chat_bubble, size: 23),
             label: '',
           ),
           BottomNavigationBarItem(
