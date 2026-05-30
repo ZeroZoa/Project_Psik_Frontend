@@ -40,12 +40,17 @@ class _ShellScaffold extends StatefulWidget {
 
 class _ShellScaffoldState extends State<_ShellScaffold> {
   bool _isNavBarVisible = true;
+  double _accumulatedScroll = 0.0;
+
+  static const double _hideThreshold = 80.0;  // 80px 내려가야 숨기기
+
 
   @override
   void didUpdateWidget(_ShellScaffold oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.currentIndex != widget.currentIndex) {
-      _isNavBarVisible = true; // 탭 전환 시 다시 표시
+      _isNavBarVisible = true;
+      _accumulatedScroll = 0.0;
     }
   }
 
@@ -60,11 +65,22 @@ class _ShellScaffoldState extends State<_ShellScaffold> {
       body: NotificationListener<ScrollUpdateNotification>(
         onNotification: (notification) {
           final delta = notification.scrollDelta ?? 0;
-          if (delta > 3 && _isNavBarVisible) {
-            setState(() => _isNavBarVisible = false);
-          } else if (delta < -3 && !_isNavBarVisible) {
-            setState(() => _isNavBarVisible = true);
+
+          if (delta > 0) {
+            // 아래 스크롤 — 누적
+            _accumulatedScroll += delta;
+            if (_accumulatedScroll > _hideThreshold && _isNavBarVisible) {
+              setState(() => _isNavBarVisible = false);
+              _accumulatedScroll = 0;
+            }
+          } else if (delta < 0) {
+            // 위 스크롤 — 방향 바뀌면 누적 초기화 후 반응
+            _accumulatedScroll = 0;
+            if (!_isNavBarVisible) {
+              setState(() => _isNavBarVisible = true);
+            }
           }
+
           return false;
         },
         child: widget.child,

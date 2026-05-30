@@ -36,7 +36,7 @@ class MainTopNavBar extends StatelessWidget implements PreferredSizeWidget {
             context.watch<AuthProvider>().skinConcerns.isNotEmpty)
           IconButton(
             icon: SvgPicture.asset(
-              'assets/icons/settings.svg',
+              'assets/icons/settings-2.svg',
               width: 23, height: 23,
               colorFilter: const ColorFilter.mode(AppColors.textSub2, BlendMode.srcIn),
             ),
