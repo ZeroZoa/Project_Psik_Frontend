@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 import '../../features/auth/domain/enums/skin_concern.dart';
 import '../../features/mypage/data/repositories/member_repository.dart';
@@ -36,14 +36,14 @@ class MainTopNavBar extends StatelessWidget implements PreferredSizeWidget {
             isAuthenticated &&
             context.watch<AuthProvider>().skinConcerns.isNotEmpty)
           IconButton(
-            icon: const Icon(LucideIcons.settings2, size: 23),
+            icon: const Icon(Symbols.tune, size: 23),
             color: AppColors.textSub2,
             onPressed: () => _showEditConcernsSheet(context),
           ),
         if (!isAuthenticated)
           IconButton(
             color: AppColors.textSub2,
-            icon: const Icon(LucideIcons.logIn),
+            icon: const Icon(Symbols.login),
             onPressed: () => showLoginModal(context),
           ),
       ],
