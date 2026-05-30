@@ -25,4 +25,4 @@ jobs:
         run: flutter pub get
 
       - name: Build check
-        run: flutter build web --release --dart-define=API_URL=https://api.psik.kr --dart-define=OAUTH_URL=https://api.psik.kr
+        run: flutter build web --release --no-tree-shake-icons --dart-define=API_URL=https://api.psik.kr --dart-define=OAUTH_URL=https://api.psik.kr
