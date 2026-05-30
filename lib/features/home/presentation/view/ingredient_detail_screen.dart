@@ -3,8 +3,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
 
 import '../../../../common/theme/app_colors.dart';
 import '../../data/models/ingredient_detail_model.dart';
@@ -123,14 +124,15 @@ class _IngredientDetailScreenState extends State<IngredientDetailScreen> {
                     const SizedBox(height: 24),
 
                     if (detail.products.isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.only(left: 4, bottom: 16),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 16),
                         child: Row(
                           children: [
-                            Icon(Symbols.shopping_bag,
-                                size: 20, color: AppColors.textTitle),
-                            SizedBox(width: 5),
-                            Text(
+                            SvgPicture.asset('assets/icons/shopping-bag.svg',
+                                width: 20, height: 20,
+                                colorFilter: const ColorFilter.mode(AppColors.textTitle, BlendMode.srcIn)),
+                            const SizedBox(width: 5),
+                            const Text(
                               '추천 아이템',
                               style: TextStyle(
                                 fontSize: 18,
@@ -503,11 +505,9 @@ class _EffectsCardState extends State<_EffectsCard> {
           padding: const EdgeInsets.only(left: 4, bottom: 14),
           child: Row(
             children: [
-              const Icon(
-                Symbols.auto_awesome,
-                size: 20,
-                color: AppColors.textTitle,
-              ),
+              SvgPicture.asset('assets/icons/sparkle.svg',
+                  width: 20, height: 20,
+                  colorFilter: const ColorFilter.mode(AppColors.textTitle, BlendMode.srcIn)),
               const SizedBox(width: 8),
               const Text(
                 '핵심 효과',
@@ -612,12 +612,10 @@ class _CautionsCard extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Row(
-            children: const [
-              Icon(
-                Symbols.error,
-                size: 20,
-                color: Color(0xFFE45D4B),
-              ),
+            children: [
+              SvgPicture.asset('assets/icons/circle-alert.svg',
+                  width: 20, height: 20,
+                  colorFilter: const ColorFilter.mode(Color(0xFFE45D4B), BlendMode.srcIn)),
               SizedBox(width: 8),
               Text(
                 '사용 시 주의해주세요',
@@ -741,8 +739,9 @@ class _ProductListCard extends StatelessWidget {
                       );
                     },
                   )
-                      : const Icon(Symbols.shopping_bag,
-                      color: Colors.grey),
+                      : SvgPicture.asset('assets/icons/shopping-bag.svg',
+                      width: 40, height: 40,
+                      colorFilter: const ColorFilter.mode(Colors.grey, BlendMode.srcIn)),
                 ),
               ),
               const SizedBox(width: 16),

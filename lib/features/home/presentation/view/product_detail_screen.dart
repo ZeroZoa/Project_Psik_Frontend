@@ -2,9 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../common/theme/app_colors.dart';
 import '../../../../common/widgets/login_modal.dart';
@@ -206,9 +206,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ? Image.network(
                           product.imageUrl!,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Center(
-                            child: Icon(Symbols.shopping_bag,
-                                size: 64, color: AppColors.textSub1),
+                          errorBuilder: (_, __, ___) => Center(
+                            child: SvgPicture.asset('assets/icons/shopping-bag.svg',
+                                width: 64, height: 64,
+                                colorFilter: const ColorFilter.mode(AppColors.textSub1, BlendMode.srcIn)),
                           ),
                           loadingBuilder: (context, child, progress) {
                             if (progress == null) return child;
@@ -224,9 +225,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             );
                           },
                         )
-                            : const Center(
-                          child: Icon(Symbols.shopping_bag,
-                              size: 64, color: AppColors.textSub1),
+                            : Center(
+                          child: SvgPicture.asset('assets/icons/shopping-bag.svg',
+                              width: 64, height: 64,
+                              colorFilter: const ColorFilter.mode(AppColors.textSub1, BlendMode.srcIn)),
                         ),
                       ),
                     ),
@@ -331,8 +333,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     color: AppColors.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Icon(Symbols.info,
-                                      size: 16, color: AppColors.primary),
+                                  child: SvgPicture.asset('assets/icons/info.svg',
+                                      width: 16, height: 16,
+                                      colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn)),
                                 ),
                                 const SizedBox(width: 10),
                                 const Text(
@@ -373,8 +376,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Symbols.info,
-                              size: 14, color: AppColors.textSub2),
+                          SvgPicture.asset('assets/icons/info.svg',
+                              width: 14, height: 14,
+                              colorFilter: const ColorFilter.mode(AppColors.textSub2, BlendMode.srcIn)),
                           const SizedBox(width: 8),
                           const Expanded(
                             child: Text(
@@ -481,7 +485,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  icon: const Icon(Symbols.shopping_cart, size: 18),
+                  icon: SvgPicture.asset('assets/icons/shopping-cart.svg',
+                      width: 18, height: 18,
+                      colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
                   label: const Text(
                     '사러 가기',
                     style: TextStyle(
