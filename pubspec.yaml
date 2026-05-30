@@ -24,9 +24,9 @@ dependencies:
   universal_html: ^2.3.0
   image_picker: ^1.2.1
   url_launcher: ^6.3.2
-  lucide_icons_flutter: ^3.1.14
   fl_chart: ^1.2.0
   http_parser: ^4.0.0
+  material_symbols_icons: ^4.2928.1
 
   flutter_localizations:
     sdk: flutter

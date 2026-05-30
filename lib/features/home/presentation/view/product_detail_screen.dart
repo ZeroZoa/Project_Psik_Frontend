@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -207,7 +207,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           product.imageUrl!,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => const Center(
-                            child: Icon( LucideIcons.shoppingBag,
+                            child: Icon(Symbols.shopping_bag,
                                 size: 64, color: AppColors.textSub1),
                           ),
                           loadingBuilder: (context, child, progress) {
@@ -225,7 +225,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           },
                         )
                             : const Center(
-                          child: Icon(LucideIcons.shoppingBag,
+                          child: Icon(Symbols.shopping_bag,
                               size: 64, color: AppColors.textSub1),
                         ),
                       ),
@@ -331,7 +331,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     color: AppColors.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Icon(LucideIcons.info,
+                                  child: const Icon(Symbols.info,
                                       size: 16, color: AppColors.primary),
                                 ),
                                 const SizedBox(width: 10),
@@ -373,7 +373,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(LucideIcons.info,
+                          Icon(Symbols.info,
                               size: 14, color: AppColors.textSub2),
                           const SizedBox(width: 8),
                           const Expanded(
@@ -481,7 +481,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  icon: const Icon(LucideIcons.shoppingCart, size: 18),
+                  icon: const Icon(Symbols.shopping_cart, size: 18),
                   label: const Text(
                     '사러 가기',
                     style: TextStyle(

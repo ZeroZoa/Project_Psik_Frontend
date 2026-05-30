@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart'; // [필수] 이동 처리를 위해 추가
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../theme/app_colors.dart';
 
 class MainBottomNavBar extends StatelessWidget {
@@ -57,23 +57,23 @@ class MainBottomNavBar extends StatelessWidget {
         elevation: 0,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.home),
+            icon: Icon(Symbols.home, size: 28),
             label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.messagesSquare),
+            icon: Icon(Symbols.chat_bubble, size: 24),
             label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.search),
+            icon: Icon(Symbols.search, size: 27),
             label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.layoutList),
+            icon: Icon(Symbols.list_alt, size: 26),
             label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.user),
+            icon: Icon(Symbols.person, size: 28),
             label: '',
           ),
         ],
