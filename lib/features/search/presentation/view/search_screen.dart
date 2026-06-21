@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
+import '../../../../common/widgets/login_modal.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../chat/presentation/view/chat_modal.dart';
 import '../../../community/presentation/widgets/post_card.dart';
 import '../../../home/data/models/ingredient_summary_model.dart';
 import '../../data/repositories/search_repository.dart';
@@ -49,6 +52,25 @@ class _SearchViewState extends State<_SearchView> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          // 비로그인이면 로그인 모달 → 로그인 성공 시 챗봇 열기
+          final isAuthenticated = context.read<AuthProvider>().isAuthenticated;
+          if (!isAuthenticated) {
+            await showLoginModal(context);
+            if (!context.mounted) return;
+            if (!context.read<AuthProvider>().isAuthenticated) return;
+          }
+          if (!context.mounted) return;
+          showChatModal(context);
+        },
+        icon: const Icon(Icons.auto_awesome_rounded),
+        label: const Text('AI 성분 상담'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+      ),
       body: Column(
         children: [
           // ── 검색창 — 입력 시 provider.search 호출, X 버튼으로 초기화 ──
