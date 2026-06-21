@@ -15,6 +15,8 @@ import 'core/network/auth_interceptor.dart';
 
 // [Feature - Repositories]
 import 'features/admin/data/repositories/admin_repository.dart';
+import 'features/chat/data/repositories/chat_repository.dart';
+import 'features/chat/presentation/providers/chat_provider.dart';
 import 'features/home/data/repositories/cosmetics_repository.dart';
 import 'features/home/data/repositories/member_product_repository.dart';
 import 'features/diary/data/repositories/skin_diary_repository.dart';
@@ -73,6 +75,7 @@ void main() async {
   final memberRepository = MemberRepository(dio);
   final searchRepository = SearchRepository(dio);
   final inquiryRepository = InquiryRepository(dio);
+  final chatRepository = ChatRepository(dio);
 
 
   runApp(
@@ -117,10 +120,16 @@ void main() async {
 
         // ── Inquiry  ──
         Provider<InquiryRepository>.value(value: inquiryRepository),
-
         ChangeNotifierProvider<InquiryProvider>(
           create: (_) => InquiryProvider(inquiryRepository),
         ),
+
+        // ── Chat ──
+        Provider<ChatRepository>.value(value: chatRepository),
+        ChangeNotifierProvider<ChatProvider>(
+          create: (_) => ChatProvider(chatRepository),
+        ),
+
 
         ChangeNotifierProvider<MypageProvider>(
           create: (_) => MypageProvider(
