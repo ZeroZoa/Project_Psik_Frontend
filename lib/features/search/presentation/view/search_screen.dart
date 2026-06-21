@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -64,7 +65,12 @@ class _SearchViewState extends State<_SearchView> {
           if (!context.mounted) return;
           showChatModal(context);
         },
-        icon: const Icon(Icons.auto_awesome_rounded),
+        icon: SvgPicture.asset(
+          'assets/icons/sparkle.svg',
+          width: 20,
+          height: 20,
+          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+        ),
         label: const Text('AI 성분 상담'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
