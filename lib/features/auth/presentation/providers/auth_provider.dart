@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:universal_html/html.dart' as html;
 import '../../data/services/auth_service.dart';
 import '../../domain/enums/skin_concern.dart';
+import '../../../../core/network/auth_interceptor.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
@@ -37,6 +37,7 @@ class AuthProvider extends ChangeNotifier {
   bool get profileComplete => _profileComplete;
 
   Dio? _dio;
+  AuthInterceptor? _authInterceptor;
 
   AuthProvider({
     AuthService? authService,
@@ -48,28 +49,21 @@ class AuthProvider extends ChangeNotifier {
     _dio = dio;
   }
 
+  /// main.dart에서 AuthInterceptor 생성 직후 연결 — Web에서 재발급받은
+  /// AccessToken을 인터셉터의 메모리 캐시에 반영하기 위해 필요.
+  void setAuthInterceptor(AuthInterceptor interceptor) {
+    _authInterceptor = interceptor;
+  }
+
   // ── 앱 시작 시 로그인 상태 확인 ──
   Future<void> checkLoginStatus() async {
     try {
       if (kIsWeb) {
-        final uri = Uri.parse(html.window.location.href);
-        final tokenFromUrl = uri.queryParameters['accessToken'];
-        if (tokenFromUrl != null && tokenFromUrl.isNotEmpty) {
-          html.window.localStorage['accessToken'] = tokenFromUrl;
-          html.window.history.replaceState(null, '', uri.path);
-        }
-        final cookieAccessToken = _getCookie('accessToken');
-        if (cookieAccessToken != null) {
-          html.window.localStorage['accessToken'] = cookieAccessToken;
-          html.document.cookie = "accessToken=; path=/; max-age=0";
-        }
-      }
-      final accessToken = kIsWeb
-          ? html.window.localStorage['accessToken']
-          : await _storage.read(key: 'accessToken');
-      if (kIsWeb) {
-        _isAuthenticated = accessToken != null;
+        // Web은 AccessToken을 어디에도 영속 저장하지 않으므로, 매 부팅(새로고침)마다
+        // RefreshToken(httpOnly 쿠키)으로 재발급받아 로그인 여부를 판단한다.
+        _isAuthenticated = await _tryReissueOnBoot();
       } else {
+        final accessToken = await _storage.read(key: 'accessToken');
         final refreshToken = await _storage.read(key: 'refreshToken');
         _isAuthenticated = accessToken != null && refreshToken != null;
       }
@@ -82,6 +76,25 @@ class AuthProvider extends ChangeNotifier {
       _resetState();
     } finally {
       notifyListeners();
+    }
+  }
+
+  /// Web 전용 — RefreshToken 쿠키로 AccessToken을 재발급받아 메모리 캐시에 채운다.
+  /// 쿠키가 없거나 만료됐으면 false(비로그인 상태)를 반환한다.
+  Future<bool> _tryReissueOnBoot() async {
+    if (_dio == null) return false;
+    try {
+      final response = await _dio!.post(
+        '/api/auth/reissue',
+        options: Options(extra: {'withCredentials': true}),
+      );
+      final accessToken = response.data['accessToken'] as String?;
+      if (accessToken == null) return false;
+      _authInterceptor?.setAccessTokenInMemory(accessToken);
+      return true;
+    } on DioException catch (e) {
+      debugPrint('[AuthProvider] 부팅 시 재발급 실패(비로그인으로 간주): ${e.response?.statusCode}');
+      return false;
     }
   }
 
@@ -135,7 +148,7 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('[AuthProvider] 로그아웃 API 실패 (무시): $e');
     }
     await _authService.logout();
-    if (kIsWeb) html.window.localStorage.remove('accessToken');
+    _authInterceptor?.clearAccessTokenInMemory();
     _resetState();
     notifyListeners();
   }
@@ -145,7 +158,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _dio?.delete('/api/members/me');
       await _authService.logout();
-      if (kIsWeb) html.window.localStorage.remove('accessToken');
+      _authInterceptor?.clearAccessTokenInMemory();
       _resetState();
       notifyListeners();
       return true;
@@ -158,7 +171,7 @@ class AuthProvider extends ChangeNotifier {
   // ── 강제 로그아웃 (토큰 만료/재발급 실패 시) ──
   Future<void> forceLogout() async {
     await _authService.logout();
-    if (kIsWeb) html.window.localStorage.remove('accessToken');
+    _authInterceptor?.clearAccessTokenInMemory();
     _resetState();
     notifyListeners();
     debugPrint('[AuthProvider] 강제 로그아웃 → isAuthenticated = false');
@@ -186,20 +199,5 @@ class AuthProvider extends ChangeNotifier {
     _skinConcerns = [];
     _role = null;
     _memberUuid = null;
-  }
-
-  // ── 쿠키 파싱 헬퍼 ──
-  String? _getCookie(String name) {
-    final cookie = html.document.cookie;
-    if (cookie == null || cookie.isEmpty) return null;
-    try {
-      final entity = cookie.split("; ").firstWhere(
-            (item) => item.trim().startsWith("$name="),
-        orElse: () => "",
-      );
-      return entity.isNotEmpty ? entity.substring(entity.indexOf('=') + 1) : null;
-    } catch (e) {
-      return null;
-    }
   }
 }

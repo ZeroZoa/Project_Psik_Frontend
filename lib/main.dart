@@ -62,6 +62,7 @@ void main() async {
   final authInterceptor = AuthInterceptor(storage, dio, authProvider);
   await authInterceptor.init();
   dio.interceptors.add(authInterceptor);
+  authProvider.setAuthInterceptor(authInterceptor);
 
   // 로그인 상태 확인
   await authProvider.checkLoginStatus();

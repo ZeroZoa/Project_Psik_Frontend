@@ -47,14 +47,10 @@ class AuthService {
   // ===================== 공통 =====================
 
   Future<void> logout() async {
+    // AccessToken은 메모리에만 있어 AuthProvider가 별도로 비우고,
+    // RefreshToken 쿠키는 서버(/api/auth/logout)가 Set-Cookie로 만료시킨다.
+    // (httpOnly 쿠키는 여기서 document.cookie로 지우려 해도 브라우저가 무시한다.)
     await _storage.deleteAll();
-
-    if (kIsWeb) {
-      html.window.localStorage.remove('accessToken');
-      html.document.cookie = "accessToken=; path=/; max-age=0";
-      html.document.cookie = "refreshToken=; path=/; max-age=0";
-    }
-
     _logger.i("로그아웃 완료");
   }
 }
