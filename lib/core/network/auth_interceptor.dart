@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:universal_html/html.dart' as html;
 import '../../features/auth/presentation/providers/auth_provider.dart';
 
 class AuthInterceptor extends Interceptor {
@@ -20,24 +19,36 @@ class AuthInterceptor extends Interceptor {
   final List<Map<String, dynamic>> _pendingRequests = [];
 
   // ── 웹/앱 토큰 읽기/쓰기/삭제 헬퍼 ──
+  // Web은 AccessToken을 어디에도 영속 저장하지 않는다 (localStorage 등 XSS로
+  // 탈취 가능한 저장소를 아예 없앰). 메모리 캐시(_accessTokenCache)만 쓰고,
+  // 새로고침 시 AuthProvider가 RefreshToken(httpOnly 쿠키)으로 재발급받아
+  // setAccessTokenInMemory()로 다시 채워준다.
   Future<String?> _readAccessToken() async {
-    if (kIsWeb) return html.window.localStorage[_accessTokenKey];
+    if (kIsWeb) return _accessTokenCache;
     return await storage.read(key: _accessTokenKey);
   }
 
   Future<void> _writeAccessToken(String token) async {
-    if (kIsWeb) {
-      html.window.localStorage[_accessTokenKey] = token;
-    } else {
+    _accessTokenCache = token;
+    if (!kIsWeb) {
       await storage.write(key: _accessTokenKey, value: token);
     }
   }
 
   void _deleteAccessToken() {
-    if (kIsWeb) {
-      html.window.localStorage.remove(_accessTokenKey);
-    }
+    _accessTokenCache = null;
     // 앱은 _forceLogout에서 authProvider.forceLogout → authService.logout → storage.deleteAll
+  }
+
+  /// Web 부팅 시(AuthProvider.checkLoginStatus) RefreshToken으로 재발급받은
+  /// AccessToken을 메모리 캐시에 반영하기 위한 공개 진입점.
+  void setAccessTokenInMemory(String token) {
+    _accessTokenCache = token;
+  }
+
+  /// 로그아웃 시 메모리에 남은 AccessToken을 제거.
+  void clearAccessTokenInMemory() {
+    _accessTokenCache = null;
   }
 
   Future<void> init() async {
