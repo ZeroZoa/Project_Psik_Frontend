@@ -58,6 +58,16 @@ go_router 기반 `_ShellScaffold` — 하단 네비게이션 바가 80px 스크�
 - 인증 토큰: **AccessToken은 절대 `localStorage`/파일 등 영속 저장소에 쓰지 않는다** (메모리 전용 원칙 — `AuthInterceptor._accessTokenCache`).
 - `kIsWeb` 분기가 필요한 코드는 web/모바일 양쪽 동작을 항상 같이 고려한다.
 
+## 도구 사용 우선순위
+
+JetBrains(IntelliJ) MCP 도구가 세션에 연결되어 있다면, 단순 열람 이상의 작업엔 일반 Read/Bash/grep보다 이걸 우선 사용한다. IntelliJ는 `/Users/noseungjun/IdeaProjects/Project_Psik`(부모 폴더) 전체를 하나의 프로젝트로 열어둔 상태이므로, `projectPath`는 항상 이 경로로 지정하고 `filePath`는 `psik_frontend/...`처럼 그 기준 상대경로로 준다.
+
+- **코드 진단**: `get_file_problems` — Dart 파일에서 정상 작동 확인됨(2026-09-23, `auth_interceptor.dart` 검증). 컴파일 통과 이상의 인스펙션까지 확인 가능.
+- **코드 검색**: `search_in_files_by_regex` — 2026-09-23 기준 백엔드/프론트엔드 모두에서 `probablyHasMoreMatchingEntries` 스키마 에러로 실패 확인됨 (Dart 지원 문제가 아니라 도구 자체 버그로 보임). **당분간 grep으로 폴백**, 이후 세션에서 재시도해서 고쳐졌는지 확인할 것.
+- **심볼 리네임/조회**(`rename_refactoring`, `get_symbol_info`): Dart 파일에서 동작 여부 미검증. 시도 후 실패하면 조용히 네이티브 방식(수동 grep + Edit)으로 폴백한다.
+
+CI와 동일한 검증(`flutter analyze`, `flutter test`)은 계속 네이티브 명령으로 한다 — IDE 진단은 보완재이지 대체재가 아니다.
+
 ## 테스트 전략
 
 **현재 상태**: 테스트 없음 (`test/widget_test.dart`는 보일러플레이트, 로직 전부 주석 처리됨).
