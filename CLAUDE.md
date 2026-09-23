@@ -14,6 +14,11 @@
 - 차트: fl_chart
 - 배포: Firebase Hosting
 
+## Commands
+- Run (web): `flutter run -d chrome --dart-define=API_URL=http://localhost:8080`
+- Analyze: `flutter analyze`
+- Test: `flutter test`
+
 ## 디렉토리 구조 (feature-based)
 
 ```
@@ -45,11 +50,23 @@ lib/
 ### 라우팅
 go_router 기반 `_ShellScaffold` — 하단 네비게이션 바가 80px 스크롤마다 자동 숨김/노출.
 
+## Core Rules
+
+- 상태관리는 `Provider` — `ChangeNotifier` 상속, private 필드 + public getter, 상태 변경 직후 `notifyListeners()` 호출.
+- Repository는 생성자로 `Dio` 인스턴스를 주입받는다 (예: `CosmeticsRepository(dio)`). `main.dart`에서 전부 생성 후 `MultiProvider`로 등록.
+- API 통신은 반드시 `Dio` 경유 — `http` 패키지나 별도 클라이언트를 새로 만들지 않는다.
+- 인증 토큰: **AccessToken은 절대 `localStorage`/파일 등 영속 저장소에 쓰지 않는다** (메모리 전용 원칙 — `AuthInterceptor._accessTokenCache`).
+- `kIsWeb` 분기가 필요한 코드는 web/모바일 양쪽 동작을 항상 같이 고려한다.
+
 ## 테스트 전략
 
 **현재 상태**: 테스트 없음 (`test/widget_test.dart`는 보일러플레이트, 로직 전부 주석 처리됨).
 
 **원칙**: Flutter 위젯 테스트는 비용 대비 효율이 낮은 경우가 많아, Provider/Repository 단위 테스트부터 우선 도입 권장.
+
+**컨벤션** (새로 작성 시 적용):
+- `flutter_test`의 `group`/`test` 사용, mock은 필요 최소한으로
+- 위젯 테스트보다 Provider/Repository 단위 테스트 우선
 
 **실행**: `flutter test`
 
@@ -76,7 +93,7 @@ go_router 기반 `_ShellScaffold` — 하단 네비게이션 바가 80px 스크�
 
 - **코드는 직접 수정하지 않고 스니펫만 제공한다.** 사용자가 명시적으로 "이번엔 네가 수정해줘"라고 말할 때만 예외.
 - **git add/commit/push도 항상 사용자가 직접 한다.** AI는 실행할 명령어와 커밋 메시지만 제공하고, 별도 지시("커밋까지 해줘" 등) 없으면 절대 직접 커밋/푸시하지 않는다.
-- 커밋 메시지는 `type: 설명` 스타일 (`fix:`, `feat:`, `perf:`) — 기존 로그 참고.
+- 커밋 메시지는 `type: 설명` 스타일. 타입: `feat`, `fix`, `docs`, `perf`, `chore`.
 
 ## 알려진 기술 부채
 
