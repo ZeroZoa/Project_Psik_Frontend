@@ -131,8 +131,6 @@ class AuthProvider extends ChangeNotifier {
       _skinConcerns = rawConcerns
           .map((e) => SkinConcern.values.byName(e as String))
           .toList();
-
-      debugPrint('[AuthProvider] role=$_role, isAdmin=$isAdmin');
     } on DioException catch (e) {
       debugPrint('[AuthProvider] /api/members/me 실패: ${e.response?.statusCode}');
       await _authService.logout();
