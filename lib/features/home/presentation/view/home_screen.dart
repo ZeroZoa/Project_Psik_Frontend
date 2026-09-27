@@ -44,6 +44,16 @@ class _HomeViewState extends State<_HomeView> {
     final nickname = authProvider.nickname;
     final userSkinConcerns = authProvider.skinConcerns;
 
+    if (provider.errorMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(provider.errorMessage!), backgroundColor: AppColors.error),
+        );
+        provider.errorMessage = null;
+      });
+    }
+
     if (provider.isLoading) {
       return const Scaffold(
         backgroundColor: AppColors.background,

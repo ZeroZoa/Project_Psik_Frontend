@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/network/api_error_handler.dart';
 import '../../../home/data/models/ingredient_detail_model.dart';
 import '../../../home/data/models/ingredient_summary_model.dart';
 import '../../../home/data/models/product_model.dart';
@@ -26,7 +27,7 @@ class AdminProvider extends ChangeNotifier {
     try {
       ingredients = await _cosmeticsRepository.getIngredients();
     } catch (e) {
-      error = e.toString();
+      error = ApiErrorHandler.getMessage(e);
     } finally {
       isIngredientsLoading = false;
       notifyListeners();
@@ -56,7 +57,7 @@ class AdminProvider extends ChangeNotifier {
       await loadIngredients();
       return true;
     } catch (e) {
-      error = e.toString();
+      error = ApiErrorHandler.getMessage(e);
       notifyListeners();
       return false;
     }
@@ -87,7 +88,7 @@ class AdminProvider extends ChangeNotifier {
       await loadIngredients();
       return true;
     } catch (e) {
-      error = e.toString();
+      error = ApiErrorHandler.getMessage(e);
       notifyListeners();
       return false;
     }
@@ -109,7 +110,7 @@ class AdminProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      error = e.toString();
+      error = ApiErrorHandler.getMessage(e);
       notifyListeners();
       return false;
     }
@@ -137,7 +138,7 @@ class AdminProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      error = e.toString();
+      error = ApiErrorHandler.getMessage(e);
       notifyListeners();
       return false;
     }
@@ -168,7 +169,7 @@ class AdminProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      error = e.toString();
+      error = ApiErrorHandler.getMessage(e);
       notifyListeners();
       return false;
     }
@@ -182,7 +183,7 @@ class AdminProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      error = e.toString();
+      error = ApiErrorHandler.getMessage(e);
       notifyListeners();
       return false;
     }
@@ -196,7 +197,7 @@ class AdminProvider extends ChangeNotifier {
     try {
       products = await _adminRepository.getAllProducts();
     } catch (e) {
-      error = e.toString();
+      error = ApiErrorHandler.getMessage(e);
     } finally {
       isProductsLoading = false;
       notifyListeners();

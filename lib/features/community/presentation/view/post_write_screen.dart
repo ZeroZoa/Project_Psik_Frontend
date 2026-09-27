@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../widgets/post_image_section.dart';
 import '../../data/models/post_model.dart';
 import '../providers/community_provider.dart';
@@ -71,9 +72,15 @@ class _PostWriteScreenState extends State<PostWriteScreen> {
     );
 
     if (picked.isNotEmpty) {
+      final dropped = picked.length - remaining;
       setState(() {
         _imageFiles.addAll(picked.take(remaining));
       });
+      if (dropped > 0 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('최대 5장까지만 첨부할 수 있어 $dropped장은 제외되었습니다.')),
+        );
+      }
     }
   }
 
@@ -124,7 +131,7 @@ class _PostWriteScreenState extends State<PostWriteScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('저장 실패: $e'),
+              content: Text('저장 실패: ${ApiErrorHandler.getMessage(e)}'),
               backgroundColor: AppColors.error),
         );
       }

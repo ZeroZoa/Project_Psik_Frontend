@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../../../diary/data/models/skin_diary_response.dart';
 import '../../../diary/data/repositories/skin_diary_repository.dart';
 import '../../data/models/member_model.dart';
@@ -23,6 +24,7 @@ class MypageProvider extends ChangeNotifier {
       );
 
   bool isLoading = false;
+  String? errorMessage;
   MemberModel? member;
 
   List<PostModel> myPosts = [];
@@ -38,6 +40,7 @@ class MypageProvider extends ChangeNotifier {
     try {
       recentDiaries = await _skinDiaryRepository.getRecentDiaries();
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error fetching recent diaries: $e");
     } finally {
       isTabLoading = false;
@@ -53,6 +56,7 @@ class MypageProvider extends ChangeNotifier {
     try {
       member = await _memberRepository.getMyInfo();
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error fetching my info: $e");
     } finally {
       isLoading = false;
@@ -66,7 +70,9 @@ class MypageProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error updating nickname: $e");
+      notifyListeners();
       return false;
     }
   }
@@ -85,6 +91,7 @@ class MypageProvider extends ChangeNotifier {
     try {
       myPosts = await _communityRepository.getMyPosts();
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error fetching my posts: $e");
     } finally {
       isTabLoading = false;
@@ -98,6 +105,7 @@ class MypageProvider extends ChangeNotifier {
     try {
       likedPosts = await _communityRepository.getMyLikedPosts();
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error fetching liked posts: $e");
     } finally {
       isTabLoading = false;
@@ -111,6 +119,7 @@ class MypageProvider extends ChangeNotifier {
     try {
       commentedPosts = await _communityRepository.getMyCommentedPosts();
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error fetching commented posts: $e");
     } finally {
       isTabLoading = false;
@@ -124,6 +133,7 @@ class MypageProvider extends ChangeNotifier {
     try {
       myComments = await _communityRepository.getMyComments();
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error fetching my comments: $e");
     } finally {
       isTabLoading = false;
@@ -137,6 +147,7 @@ class MypageProvider extends ChangeNotifier {
     try {
       ownedProducts = await _memberProductRepository.getMyOwnedProducts();
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error fetching owned products: $e");
     } finally {
       isTabLoading = false;

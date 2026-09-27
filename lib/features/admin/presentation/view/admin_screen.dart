@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:psik_frontend/features/admin/presentation/view/product_form_screen.dart';
 
 import '../../../../common/theme/app_colors.dart';
+import '../../../../common/widgets/confirm_dialog.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../../../home/data/models/ingredient_detail_model.dart';
 import '../../../home/data/models/product_model.dart';
 import '../../../home/data/repositories/cosmetics_repository.dart';
@@ -119,8 +121,11 @@ class _IngredientTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    ///Provider를 통해 화면에 뿌려질 데이터에 대한 상태와 로직 관리(Provider -> Repository를 call하여 로직 관리)
-    final provider = context.watch<AdminProvider>();
+    // 이 탭이 실제로 쓰는 필드(ingredients, isIngredientsLoading)만 select —
+    // 제품 탭 쪽 상태(products 등)가 바뀌어도 이 탭은 리빌드되지 않는다.
+    final (ingredients, isLoading) = context.select<AdminProvider,
+        (List<IngredientDetailModel>, bool)>(
+            (p) => (p.ingredients, p.isIngredientsLoading));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -139,10 +144,10 @@ class _IngredientTab extends StatelessWidget {
         },
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: provider.isIngredientsLoading
+      body: isLoading
           ? const Center(
           child: CircularProgressIndicator(color: AppColors.primary))
-          : provider.ingredients.isEmpty
+          : ingredients.isEmpty
           ? Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -156,15 +161,14 @@ class _IngredientTab extends StatelessWidget {
         ),
       )
           : RefreshIndicator(
-        onRefresh: () => provider.loadIngredients(),
+        onRefresh: () => context.read<AdminProvider>().loadIngredients(),
         color: AppColors.primary,
         child: ListView.separated(
           padding: const EdgeInsets.all(16),
-          itemCount: provider.ingredients.length,
+          itemCount: ingredients.length,
           separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
-            return _IngredientTile(
-                ingredient: provider.ingredients[index]);
+            return _IngredientTile(ingredient: ingredients[index]);
           },
         ),
       ),
@@ -265,42 +269,21 @@ class _IngredientTile extends StatelessWidget {
   }
 
   ///성분 삭제 전 확인용 다이얼로그
-  void _confirmDelete(BuildContext context, AdminProvider provider,
-      IngredientDetailModel ingredient) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('성분 삭제',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('${ingredient.name}을(를) 삭제하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('취소',
-                style: TextStyle(color: Colors.grey.shade600)),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final success =
-              await provider.deleteIngredient(ingredient.id);
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content:
-                Text(success ? '삭제되었습니다.' : '삭제에 실패했습니다.'),
-                backgroundColor:
-                success ? AppColors.success : AppColors.error,
-              ));
-            },
-            child: const Text('삭제',
-                style: TextStyle(
-                    color: AppColors.error, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context, AdminProvider provider,
+      IngredientDetailModel ingredient) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '성분 삭제',
+      content: '${ingredient.name}을(를) 삭제하시겠습니까?',
     );
+    if (!confirmed) return;
+
+    final success = await provider.deleteIngredient(ingredient.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(success ? '삭제되었습니다.' : '삭제에 실패했습니다: ${provider.error}'),
+      backgroundColor: success ? AppColors.success : AppColors.error,
+    ));
   }
 }
 
@@ -313,7 +296,11 @@ class _ProductTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<AdminProvider>();
+    // 이 탭이 실제로 쓰는 필드(products, isProductsLoading)만 select —
+    // 성분 탭 쪽 상태(ingredients 등)가 바뀌어도 이 탭은 리빌드되지 않는다.
+    final (products, isLoading) = context
+        .select<AdminProvider, (List<ProductModel>, bool)>(
+            (p) => (p.products, p.isProductsLoading));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -332,10 +319,10 @@ class _ProductTab extends StatelessWidget {
         },
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: provider.isProductsLoading
+      body: isLoading
           ? const Center(
           child: CircularProgressIndicator(color: AppColors.primary))
-          : provider.products.isEmpty
+          : products.isEmpty
           ? Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -350,11 +337,10 @@ class _ProductTab extends StatelessWidget {
       )
           : ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: provider.products.length,
+        itemCount: products.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
-          return _ProductTile(
-              product: provider.products[index]);
+          return _ProductTile(product: products[index]);
         },
       ),
     );
@@ -435,42 +421,21 @@ class _ProductTile extends StatelessWidget {
   }
 
   ///제품 삭제 전 확인용 다이얼로그
-  void _confirmDelete(BuildContext context, AdminProvider provider,
-      ProductModel product) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('제품 삭제',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('${product.name}을(를) 삭제하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('취소',
-                style: TextStyle(color: Colors.grey.shade600)),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final success =
-              await provider.deleteProduct(product.id);
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content:
-                Text(success ? '삭제되었습니다.' : '삭제에 실패했습니다.'),
-                backgroundColor:
-                success ? AppColors.success : AppColors.error,
-              ));
-            },
-            child: const Text('삭제',
-                style: TextStyle(
-                    color: AppColors.error, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context, AdminProvider provider,
+      ProductModel product) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '제품 삭제',
+      content: '${product.name}을(를) 삭제하시겠습니까?',
     );
+    if (!confirmed) return;
+
+    final success = await provider.deleteProduct(product.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(success ? '삭제되었습니다.' : '삭제에 실패했습니다: ${provider.error}'),
+      backgroundColor: success ? AppColors.success : AppColors.error,
+    ));
   }
 }
 /// 문의 관리 탭 (관리자)
@@ -500,6 +465,11 @@ class _InquiryTabState extends State<_InquiryTab> {
       await context.read<InquiryRepository>().getAllInquiries();
     } catch (e) {
       debugPrint('문의 목록 조회 실패: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('문의 목록을 불러오지 못했습니다: ${ApiErrorHandler.getMessage(e)}')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -676,8 +646,8 @@ class _InquiryDetailScreenState extends State<_InquiryDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('답변 등록에 실패했습니다.'),
+        SnackBar(
+            content: Text('답변 등록 실패: ${ApiErrorHandler.getMessage(e)}'),
             backgroundColor: AppColors.error),
       );
     } finally {

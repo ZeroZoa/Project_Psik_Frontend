@@ -3,6 +3,7 @@ import '../../data/models/post_model.dart';
 import '../../data/models/comment_model.dart';
 import '../../data/repositories/community_repository.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/network/api_error_handler.dart';
 
 class CommunityProvider extends ChangeNotifier {
   final CommunityRepository _repository;
@@ -12,6 +13,9 @@ class CommunityProvider extends ChangeNotifier {
   bool isLoading = false;
   bool isDetailLoading = false;
   bool isCommentsLoading = false;
+
+  // 마지막으로 실패한 작업의 사용자 표시용 메시지. 화면에서 소비 후 null로 되돌리는 것을 권장.
+  String? errorMessage;
 
   PostModel? currentPost;
   List<CommentModel> comments = [];
@@ -25,6 +29,10 @@ class CommunityProvider extends ChangeNotifier {
   int _allPostsPage = 0;
   String _currentListType = ''; // 'hot' | 'new' | 'popular'
 
+  // 좋아요 연타 방지용 in-flight 가드
+  bool _isTogglingPostLike = false;
+  final Set<int> _togglingCommentLikeIds = {};
+
   // ===================== 게시글 목록 =====================
 
   Future<void> fetchHomePosts() async {
@@ -36,6 +44,7 @@ class CommunityProvider extends ChangeNotifier {
       newPosts = data['newPosts'] ?? [];
       popularPosts = data['popular'] ?? [];
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint('홈 게시글 조회 실패: $e');
     } finally {
       isHomeLoading = false;
@@ -71,6 +80,7 @@ class CommunityProvider extends ChangeNotifier {
       _allPostsPage++;
       hasMoreAllPosts = fetchedPosts.length >= 20;
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint('전체 게시글 조회 실패: $e');
     } finally {
       isAllPostsLoading = false;
@@ -87,6 +97,7 @@ class CommunityProvider extends ChangeNotifier {
     try {
       currentPost = await _repository.getPost(postId);
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error fetching post: $e");
       currentPost = null;
     } finally {
@@ -131,6 +142,8 @@ class CommunityProvider extends ChangeNotifier {
   // ===================== 좋아요 =====================
 
   Future<void> togglePostLike(int postId) async {
+    if (_isTogglingPostLike) return; // 연타 시 중복 요청 방지
+    _isTogglingPostLike = true;
     try {
       final liked = await _repository.togglePostLike(postId);
 
@@ -143,7 +156,11 @@ class CommunityProvider extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error toggling post like: $e");
+      notifyListeners();
+    } finally {
+      _isTogglingPostLike = false;
     }
   }
 
@@ -156,6 +173,7 @@ class CommunityProvider extends ChangeNotifier {
     try {
       comments = await _repository.getComments(postId);
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error fetching comments: $e");
       comments = [];
     } finally {
@@ -168,29 +186,47 @@ class CommunityProvider extends ChangeNotifier {
     required String content,
     int? parentId,
   }) async {
-    await _repository.createComment(postId,
-        content: content, parentId: parentId);
-    await fetchComments(postId);
+    try {
+      await _repository.createComment(postId,
+          content: content, parentId: parentId);
+      await fetchComments(postId);
 
-    if (currentPost != null) {
-      currentPost = currentPost!.copyWith(
-        commentCount: currentPost!.commentCount + 1,
-      );
+      if (currentPost != null) {
+        currentPost = currentPost!.copyWith(
+          commentCount: currentPost!.commentCount + 1,
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
+      debugPrint("Error creating comment: $e");
       notifyListeners();
     }
   }
 
   Future<void> deleteComment(int postId, int commentId) async {
-    await _repository.deleteComment(postId, commentId);
-    await fetchComments(postId);
+    try {
+      await _repository.deleteComment(postId, commentId);
+      await fetchComments(postId);
+    } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
+      debugPrint("Error deleting comment: $e");
+      notifyListeners();
+    }
   }
 
   Future<void> toggleCommentLike(int postId, int commentId) async {
+    if (_togglingCommentLikeIds.contains(commentId)) return; // 연타 시 중복 요청 방지
+    _togglingCommentLikeIds.add(commentId);
     try {
       await _repository.toggleCommentLike(postId, commentId);
       await fetchComments(postId);
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint("Error toggling comment like: $e");
+      notifyListeners();
+    } finally {
+      _togglingCommentLikeIds.remove(commentId);
     }
   }
 }

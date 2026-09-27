@@ -70,6 +70,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     await provider.createComment(widget.postId,
         content: text, parentId: _replyToCommentId);
+
+    if (!mounted) return;
+    final err = provider.errorMessage;
+    if (err != null) {
+      provider.errorMessage = null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('댓글 등록 실패: $err'), backgroundColor: AppColors.error),
+      );
+      return; // 실패 시 입력 내용을 지우지 않아 재시도 가능하게 둔다
+    }
+
     _commentController.clear();
     _cancelReply();
   }
@@ -277,7 +288,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         GestureDetector(
                           onTap: () async {
                             if (!await requireLogin(context)) return;
-                            provider.togglePostLike(post.postId);
+                            await provider.togglePostLike(post.postId);
+                            if (!context.mounted) return;
+                            final err = provider.errorMessage;
+                            if (err != null) {
+                              provider.errorMessage = null;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(err), backgroundColor: AppColors.error),
+                              );
+                            }
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -339,8 +358,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         CommentItem(
                           comment: root,
                           onLike: () async {
-                            if (!await requireLogin(context)) return; // [추가]
-                            provider.toggleCommentLike(widget.postId, root.commentId);
+                            if (!await requireLogin(context)) return;
+                            await provider.toggleCommentLike(widget.postId, root.commentId);
+                            if (!context.mounted) return;
+                            final err = provider.errorMessage;
+                            if (err != null) {
+                              provider.errorMessage = null;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(err), backgroundColor: AppColors.error),
+                              );
+                            }
                           },
                           onReply: () => _setReplyTarget(
                               root.commentId,
@@ -350,10 +377,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             CommentItem(
                               comment: child,
                               isReply: true,
-                              onLike: () =>
-                                  provider.toggleCommentLike(
-                                      widget.postId,
-                                      child.commentId),
+                              onLike: () async {
+                                if (!await requireLogin(context)) return;
+                                await provider.toggleCommentLike(widget.postId, child.commentId);
+                                if (!context.mounted) return;
+                                final err = provider.errorMessage;
+                                if (err != null) {
+                                  provider.errorMessage = null;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(err), backgroundColor: AppColors.error),
+                                  );
+                                }
+                              },
                               onReply: () {},
                             )),
                       ]),

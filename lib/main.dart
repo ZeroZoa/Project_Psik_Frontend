@@ -12,6 +12,7 @@ import 'core/router/app_router.dart';
 // [Common]
 import 'common/theme/app_colors.dart';
 import 'core/network/auth_interceptor.dart';
+import 'features/splash/presentation/view/splash_screen.dart';
 
 // [Feature - Repositories]
 import 'features/admin/data/repositories/admin_repository.dart';
@@ -64,8 +65,11 @@ void main() async {
   dio.interceptors.add(authInterceptor);
   authProvider.setAuthInterceptor(authInterceptor);
 
-  // 로그인 상태 확인
-  await authProvider.checkLoginStatus();
+  // 로그인 상태 확인 — runApp()을 막지 않고 백그라운드에서 진행한다.
+  // (완료 전까지는 PsikApp이 SplashScreen을 보여준다. 여기서 await 해버리면
+  // /api/auth/reissue 왕복이 끝날 때까지 첫 프레임조차 그려지지 않아 부팅 시
+  // 흰 화면 구간이 생긴다.)
+  authProvider.checkLoginStatus();
 
   // Repository 인스턴스 생성
   final cosmeticsRepository = CosmeticsRepository(dio);
@@ -166,6 +170,16 @@ class _PsikAppState extends State<PsikApp> {
 
   @override
   Widget build(BuildContext context) {
+    // 부팅 시 로그인 상태 확인(/api/auth/reissue)이 끝날 때까지는 SplashScreen을 보여준다.
+    // authProvider가 ChangeNotifier이므로 완료되는 순간 이 build()가 다시 불려 바로 아래 실제 앱으로 전환된다.
+    final authCheckComplete = context.watch<AuthProvider>().authCheckComplete;
+    if (!authCheckComplete) {
+      return const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: SplashScreen(),
+      );
+    }
+
     return MaterialApp.router(
       title: 'Psik | 당신을 위한 피부 공식',
       debugShowCheckedModeBanner: false,

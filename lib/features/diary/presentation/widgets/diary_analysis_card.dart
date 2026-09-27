@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../../common/theme/app_colors.dart';
 import '../providers/skin_analysis_provider.dart';
+import '../providers/skin_diary_provider.dart';
 
 /// AI 피부 분석 결과 카드 위젯
 /// - [SkinAnalysisProvider]를 직접 watch — analysis가 null이면 빈 위젯 반환
@@ -14,7 +15,11 @@ class DiaryAnalysisCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final analysis = context.watch<SkinAnalysisProvider>().analysis;
-    if (analysis == null) return const SizedBox.shrink();
+    final currentDiaryId = context.watch<SkinDiaryProvider>().currentDiary?.skinDiaryId;
+    // analysis가 현재 보고 있는 다이어리 것이 아니면 (날짜 전환 중 잠깐의 불일치) 표시하지 않는다
+    if (analysis == null || analysis.skinDiaryId != currentDiaryId) {
+      return const SizedBox.shrink();
+    }
 
     return Container(
       margin: const EdgeInsets.only(top: 16),
