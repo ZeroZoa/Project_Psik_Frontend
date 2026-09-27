@@ -7,8 +7,8 @@ class ApiErrorHandler {
     if (e is DioException) {
       // 백엔드 ErrorResponse.message 우선 사용
       final data = e.response?.data;
-      if (data is Map && data['message'] != null) {
-        return data['message'];
+      if (data is Map && data['message'] is String) {
+        return data['message'] as String;
       }
       return switch (e.response?.statusCode) {
         400 => '잘못된 요청입니다.',

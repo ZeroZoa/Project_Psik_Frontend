@@ -36,6 +36,10 @@ class AuthProvider extends ChangeNotifier {
   bool _profileComplete = false;
   bool get profileComplete => _profileComplete;
 
+  // 앱 부팅 시 최초 로그인 상태 확인이 끝났는지 여부 — SplashScreen을 얼마나 보여줄지 결정
+  bool _authCheckComplete = false;
+  bool get authCheckComplete => _authCheckComplete;
+
   Dio? _dio;
   AuthInterceptor? _authInterceptor;
 
@@ -75,6 +79,7 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('[AuthProvider] checkLoginStatus 실패: $e');
       _resetState();
     } finally {
+      _authCheckComplete = true;
       notifyListeners();
     }
   }
@@ -169,7 +174,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ── 강제 로그아웃 (토큰 만료/재발급 실패 시) ──
+  // 이미 비로그인 상태면 아무것도 하지 않음 — AuthInterceptor의 재진입 호출
+  // (reissue 요청 자체가 401인 경우 + 그 뒤 바깥 catch) 두 번 실행되어도
+  // 두 번째 호출은 여기서 조용히 무시되어 notifyListeners()가 중복 발생하지 않는다.
   Future<void> forceLogout() async {
+    if (!_isAuthenticated) return;
     await _authService.logout();
     _authInterceptor?.clearAccessTokenInMemory();
     _resetState();

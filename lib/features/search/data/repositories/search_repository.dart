@@ -13,20 +13,16 @@ class SearchRepository {
     int page = 0,
     int size = 20,
   }) async {
-    try {
-      final response = await _dio.get(
-        '/api/ingredients',
-        queryParameters: {
-          if (keyword != null && keyword.isNotEmpty) 'keyword': keyword,
-          'page': page,
-          'size': size,
-        },
-      );
-      final List<dynamic> content = response.data['content'];
-      return content.map((json) => IngredientSummaryModel.fromJson(json)).toList();
-    } catch (e) {
-      throw Exception('성분 검색 실패: $e');
-    }
+    final response = await _dio.get(
+      '/api/ingredients',
+      queryParameters: {
+        if (keyword != null && keyword.isNotEmpty) 'keyword': keyword,
+        'page': page,
+        'size': size,
+      },
+    );
+    final List<dynamic> content = response.data['content'];
+    return content.map((json) => IngredientSummaryModel.fromJson(json)).toList();
   }
 
   /// 게시글 검색 (키워드)
@@ -34,15 +30,11 @@ class SearchRepository {
     int page = 0,
     int size = 20,
   }) async {
-    try {
-      final response = await _dio.get(
-        '/api/posts/search',
-        queryParameters: {'keyword': keyword, 'page': page, 'size': size},
-      );
-      final List<dynamic> content = response.data['content'];
-      return content.map((json) => PostModel.fromJson(json)).toList();
-    } catch (e) {
-      throw Exception('게시글 검색 실패: $e');
-    }
+    final response = await _dio.get(
+      '/api/posts/search',
+      queryParameters: {'keyword': keyword, 'page': page, 'size': size},
+    );
+    final List<dynamic> content = response.data['content'];
+    return content.map((json) => PostModel.fromJson(json)).toList();
   }
 }

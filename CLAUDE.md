@@ -60,7 +60,7 @@ go_router 기반 `_ShellScaffold` — 하단 네비게이션 바가 80px 스크�
 
 ## 도구 사용 우선순위
 
-JetBrains(IntelliJ) MCP 도구가 세션에 연결되어 있다면, 단순 열람 이상의 작업엔 일반 Read/Bash/grep보다 이걸 우선 사용한다. IntelliJ는 `/Users/noseungjun/IdeaProjects/Project_Psik`(부모 폴더) 전체를 하나의 프로젝트로 열어둔 상태이므로, `projectPath`는 항상 이 경로로 지정하고 `filePath`는 `psik_frontend/...`처럼 그 기준 상대경로로 준다.
+JetBrains(IntelliJ) MCP 도구가 세션에 연결되어 있다면, 단순 열람 이상의 작업엔 일반 Read/Bash/grep보다 이걸 우선 사용한다. IntelliJ는 `psik_backend`와 `psik_frontend`를 **각각 별도 프로젝트**로 열어둔 상태다(2026-09-27 기준 — 예전엔 부모 폴더 하나로 열려있었으나 바뀜, 매번 실제로 연결된 프로젝트 목록을 에러 메시지나 `get_project_modules`로 확인할 것). 프론트엔드 파일 작업 시 `projectPath`는 `/Users/noseungjun/IdeaProjects/Project_Psik/psik_frontend`로 지정하고 `filePath`는 그 기준 상대경로(`lib/...`)로 준다.
 
 - **코드 진단**: `get_file_problems` — Dart 파일에서 정상 작동 확인됨(2026-09-23, `auth_interceptor.dart` 검증). 컴파일 통과 이상의 인스펙션까지 확인 가능.
 - **코드 검색**: `search_in_files_by_regex` — 2026-09-23 기준 백엔드/프론트엔드 모두에서 `probablyHasMoreMatchingEntries` 스키마 에러로 실패 확인됨 (Dart 지원 문제가 아니라 도구 자체 버그로 보임). **당분간 grep으로 폴백**, 이후 세션에서 재시도해서 고쳐졌는지 확인할 것.

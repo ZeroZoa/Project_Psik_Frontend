@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../../../../features/auth/domain/enums/skin_concern.dart';
 import '../../data/models/ingredient_detail_model.dart';
 import '../../data/repositories/cosmetics_repository.dart';
@@ -10,6 +11,7 @@ class HomeProvider extends ChangeNotifier {
   HomeProvider(this._repository, {required this.userSkinConcerns});
 
   bool isLoading = true;
+  String? errorMessage;
 
   // 고민별 추천 성분 상세 목록
   Map<SkinConcern, List<IngredientDetailModel>> recommendedDetailMap = {};
@@ -49,6 +51,7 @@ class HomeProvider extends ChangeNotifier {
         otherIngredientDetails = await _repository.getIngredients();
       }
     } catch (e) {
+      errorMessage = ApiErrorHandler.getMessage(e);
       debugPrint('[HomeProvider] 로드 실패: $e');
     } finally {
       isLoading = false;

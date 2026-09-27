@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
+import '../../../../common/widgets/confirm_dialog.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../../../home/data/models/ingredient_detail_model.dart';
 import '../../../home/data/models/product_model.dart';
 import '../../../home/data/repositories/cosmetics_repository.dart';
@@ -58,7 +60,7 @@ class _IngredientProductsScreenState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('로드 실패: $e')),
+        SnackBar(content: Text('로드 실패: ${ApiErrorHandler.getMessage(e)}')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -75,12 +77,20 @@ class _IngredientProductsScreenState
       if (!mounted) return;
       _showSnack('${product.name} 연결되었습니다.', AppColors.success);
     } catch (e) {
-      _showSnack('연결 실패: $e', AppColors.error);
+      _showSnack('연결 실패: ${ApiErrorHandler.getMessage(e)}', AppColors.error);
     }
   }
 
-  /// 현재 성분에서 제품 연결 해제 → [AdminProvider.unlinkProductFromIngredient] 호출 후 새로고침
-  Future<void> _unlink(ProductModel product) async {
+  /// 현재 성분에서 제품 연결 해제 → 확인 다이얼로그 후 [AdminProvider.unlinkProductFromIngredient] 호출
+  Future<void> _confirmUnlink(ProductModel product) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '제품 연결 해제',
+      content: '${product.name} 연결을 해제하시겠습니까?',
+      confirmLabel: '해제',
+    );
+    if (!confirmed || !mounted) return;
+
     final provider = context.read<AdminProvider>();
     try {
       await provider.unlinkProductFromIngredient(
@@ -89,7 +99,7 @@ class _IngredientProductsScreenState
       if (!mounted) return;
       _showSnack('${product.name} 연결 해제되었습니다.', AppColors.success);
     } catch (e) {
-      _showSnack('연결 해제 실패: $e', AppColors.error);
+      _showSnack('연결 해제 실패: ${ApiErrorHandler.getMessage(e)}', AppColors.error);
     }
   }
 
@@ -150,7 +160,7 @@ class _IngredientProductsScreenState
                 product: p,
                 actionLabel: '해제',
                 actionColor: AppColors.error,
-                onAction: () => _unlink(p),
+                onAction: () => _confirmUnlink(p),
               )),
             const SizedBox(height: 24),
 

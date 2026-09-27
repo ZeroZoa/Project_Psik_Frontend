@@ -89,8 +89,8 @@ class _SearchViewState extends State<_SearchView> {
               ),
               child: TextField(
                 controller: _controller,
-                onChanged: (v) => provider.search(newKeyword: v),
-                onSubmitted: (v) => provider.search(newKeyword: v),
+                onChanged: (v) => provider.onQueryChanged(v),
+                onSubmitted: (v) => provider.submitNow(v),
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
                   hintText: '성분명, 게시글 키워드로 검색',

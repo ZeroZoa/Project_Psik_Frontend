@@ -691,8 +691,12 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
               Expanded(
                 child: Builder(
                   builder: (context) {
+                    final analysis = context.watch<SkinAnalysisProvider>().analysis;
+                    final currentDiaryId =
+                        context.watch<SkinDiaryProvider>().currentDiary?.skinDiaryId;
+                    // analysis가 현재 보고 있는 다이어리 것일 때만 "분석 완료"로 간주
                     final alreadyAnalyzed =
-                        context.watch<SkinAnalysisProvider>().analysis != null;
+                        analysis != null && analysis.skinDiaryId == currentDiaryId;
                     return GestureDetector(
                       onTap: alreadyAnalyzed
                           ? null

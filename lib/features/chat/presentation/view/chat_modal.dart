@@ -28,6 +28,7 @@ class _ChatModalContent extends StatefulWidget {
 class _ChatModalContentState extends State<_ChatModalContent> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  int _lastMessageCount = 0;
 
   @override
   void dispose() {
@@ -157,7 +158,14 @@ class _ChatModalContentState extends State<_ChatModalContent> {
                   );
                 }
 
-                _scrollToBottom();
+                // 새 메시지가 실제로 추가됐을 때만 스크롤 — 에러 클리어 등 무관한
+                // 리빌드에서 사용자가 위로 스크롤해 읽던 위치를 강제로 밀어내지 않기 위함
+                // (길이가 줄어드는 경우 = 대화 초기화이므로 카운트만 갱신하고 스크롤은 안 함)
+                if (provider.messages.length != _lastMessageCount) {
+                  final grew = provider.messages.length > _lastMessageCount;
+                  _lastMessageCount = provider.messages.length;
+                  if (grew) _scrollToBottom();
+                }
                 return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
