@@ -694,9 +694,11 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
                     final analysis = context.watch<SkinAnalysisProvider>().analysis;
                     final currentDiaryId =
                         context.watch<SkinDiaryProvider>().currentDiary?.skinDiaryId;
-                    // analysis가 현재 보고 있는 다이어리 것일 때만 "분석 완료"로 간주
-                    final alreadyAnalyzed =
-                        analysis != null && analysis.skinDiaryId == currentDiaryId;
+                    // analysis가 현재 보고 있는 다이어리 것일 때만 "분석 완료"로 간주.
+                    // FAILED는 제외 — 실패한 건은 재시도(새 사진 재업로드)할 수 있어야 함.
+                    final alreadyAnalyzed = analysis != null &&
+                        analysis.skinDiaryId == currentDiaryId &&
+                        !analysis.isFailed;
                     return GestureDetector(
                       onTap: alreadyAnalyzed
                           ? null
