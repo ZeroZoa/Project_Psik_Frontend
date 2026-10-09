@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../../data/models/skin_analysis_response.dart';
 import '../../data/repositories/skin_analysis_repository.dart';
 
@@ -46,7 +47,7 @@ class SkinAnalysisProvider extends ChangeNotifier {
       }
     } catch (e) {
       if (_activeDiaryId != diaryId) return;
-      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _errorMessage = ApiErrorHandler.getMessage(e);
     } finally {
       if (_activeDiaryId == diaryId) {
         _isLoading = false;
@@ -74,7 +75,7 @@ class SkinAnalysisProvider extends ChangeNotifier {
       }
     } catch (e) {
       if (_activeDiaryId != diaryId) return;
-      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _errorMessage = ApiErrorHandler.getMessage(e);
     } finally {
       if (_activeDiaryId == diaryId) {
         _isLoading = false;

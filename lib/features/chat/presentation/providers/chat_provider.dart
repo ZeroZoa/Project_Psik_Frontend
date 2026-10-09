@@ -1,4 +1,6 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../../data/repositories/chat_repository.dart';
 
 enum MessageRole { user, assistant }
@@ -37,7 +39,9 @@ class ChatProvider extends ChangeNotifier {
       final answer = await _repository.sendMessage(trimmed);
       _messages.add(ChatMessage(role: MessageRole.assistant, text: answer));
     } catch (e) {
-      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _errorMessage = (e is DioException && e.response?.statusCode == 401)
+          ? '로그인이 필요한 서비스입니다.'
+          : ApiErrorHandler.getMessage(e);
     } finally {
       _isLoading = false;
       notifyListeners();

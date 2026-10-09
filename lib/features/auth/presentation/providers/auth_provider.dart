@@ -97,9 +97,8 @@ class AuthProvider extends ChangeNotifier {
       if (accessToken == null) return false;
       _authInterceptor?.setAccessTokenInMemory(accessToken);
       return true;
-    } on DioException catch (e) {
-      debugPrint('[AuthProvider] 부팅 시 재발급 실패(비로그인으로 간주): ${e.response?.statusCode}');
-      return false;
+    } on DioException {
+      return false;   // 비로그인 상태의 정상 흐름
     }
   }
 
