@@ -1,9 +1,9 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../../../auth/domain/enums/gender.dart';
 import '../../../auth/domain/enums/skin_concern.dart';
 import '../../../auth/domain/enums/skin_type.dart';
@@ -170,10 +170,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         if (!mounted) return;
         context.go('/home');
       }
-    } on DioException catch (e) {
-      _showSnackBar(e.response?.data['message'] ?? '오류가 발생했습니다.');
     } catch (e) {
-      _showSnackBar('오류가 발생했습니다. 다시 시도해주세요.');
+      if (!mounted) return;
+      _showSnackBar(ApiErrorHandler.getMessage(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

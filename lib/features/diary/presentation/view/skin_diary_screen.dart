@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../common/theme/app_colors.dart';
 import '../../../../common/widgets/login_modal.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../home/data/models/product_model.dart';
 import '../../../home/data/repositories/member_product_repository.dart';
@@ -378,7 +379,7 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('저장 실패: $e'),
+          content: Text('저장 실패: ${ApiErrorHandler.getMessage(e)}'),
           backgroundColor: AppColors.error,
         ),
       );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../../common/theme/app_colors.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../../../auth/domain/enums/skin_concern.dart';
 import '../../../home/data/repositories/cosmetics_repository.dart';
 import '../providers/admin_provider.dart';
@@ -69,7 +70,7 @@ class _IngredientFormScreenState extends State<IngredientFormScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('데이터 로드 실패: $e')));
+          SnackBar(content: Text('데이터 로드 실패: ${ApiErrorHandler.getMessage(e)}')));
     } finally {
       if (mounted) setState(() => _isInitLoading = false);
     }
