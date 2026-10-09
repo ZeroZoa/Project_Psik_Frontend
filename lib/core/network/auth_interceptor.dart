@@ -166,9 +166,11 @@ class AuthInterceptor extends Interceptor {
     );
 
     try {
+      final data = requestOptions.data;
       final response = await dio.request<dynamic>(
         requestOptions.path,
-        data: requestOptions.data,
+        // FormData는 한 번 전송되면 다시 쓸 수 없어서 clone()해서 재시도한다
+        data: data is FormData ? data.clone() : data,
         queryParameters: requestOptions.queryParameters,
         options: options,
       );

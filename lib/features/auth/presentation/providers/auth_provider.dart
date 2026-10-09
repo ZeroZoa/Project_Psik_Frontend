@@ -131,8 +131,14 @@ class AuthProvider extends ChangeNotifier {
           .map((e) => SkinConcern.values.byName(e as String))
           .toList();
     } on DioException catch (e) {
-      debugPrint('[AuthProvider] /api/members/me 실패: ${e.response?.statusCode}');
-      await _authService.logout();
+      final status = e.response?.statusCode;
+      debugPrint('[AuthProvider] /api/members/me 실패: $status');
+      if (status == 401 || status == 403 || status == 404) {
+        // 인증 자체가 무효(토큰 만료/계정 없음) → 저장된 토큰까지 지우고 로그아웃
+        await _authService.logout();
+      }
+      // 5xx/네트워크 오류 등 일시 장애는 저장된 토큰을 보존한다.
+      // 이번 세션만 비로그인 상태로 두고, 다음 실행/새로고침 때 다시 시도한다.
       _resetState();
     } catch (e) {
       debugPrint('[AuthProvider] profileComplete 조회 실패: $e');
