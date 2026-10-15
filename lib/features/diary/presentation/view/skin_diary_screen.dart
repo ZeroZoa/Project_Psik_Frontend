@@ -259,6 +259,22 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
 
     if (!mounted) return;
 
+    // 불러오기에 실패했으면 "기록 없음"이 아니라 실패라고 알려준다
+    if (provider.loadErrorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('기록을 불러오지 못했어요: ${provider.loadErrorMessage}'),
+          backgroundColor: AppColors.error,
+          action: SnackBarAction(
+            label: '다시 시도',
+            textColor: Colors.white,
+            // 안내가 떠 있는 동안 날짜를 바꿨을 수 있으므로, 지금 선택된 날짜를 다시 불러온다
+            onPressed: () => _loadDiaryForDate(_selectedDate),
+          ),
+        ),
+      );
+    }
+
     final diary = provider.currentDiary;
     if (diary != null) {
       setState(() {
