@@ -14,7 +14,8 @@ class DiaryAnalysisCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final analysis = context.watch<SkinAnalysisProvider>().analysis;
+    final analysisProvider = context.watch<SkinAnalysisProvider>();
+    final analysis = analysisProvider.analysis;
     final currentDiaryId = context.watch<SkinDiaryProvider>().currentDiary?.skinDiaryId;
     // analysis가 현재 보고 있는 다이어리 것이 아니면 (날짜 전환 중 잠깐의 불일치) 표시하지 않는다
     if (analysis == null || analysis.skinDiaryId != currentDiaryId) {
@@ -144,6 +145,10 @@ class DiaryAnalysisCard extends StatelessWidget {
           ]
 
           // PENDING 상태
+          else if (analysisProvider.pollingTimedOut)
+            _PendingTimeoutView(
+              onRetry: () => analysisProvider.fetchAnalysis(analysis.skinDiaryId),
+            )
           else
             const Center(
               child: Column(
@@ -208,6 +213,31 @@ class _DiaryAnalysisItem extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 폴링 시간(100초)이 끝났는데도 분석이 끝나지 않았을 때 보여주는 안내
+/// [DiaryAnalysisCard] 내부 전용
+class _PendingTimeoutView extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _PendingTimeoutView({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        children: [
+          const Text(
+            '분석이 지연되고 있어요.\n잠시 후 다시 확인해 주세요.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSub2),
+          ),
+          const SizedBox(height: 8),
+          TextButton(onPressed: onRetry, child: const Text('다시 확인')),
         ],
       ),
     );
