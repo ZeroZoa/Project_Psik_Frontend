@@ -12,12 +12,13 @@ class SkinAnalysisProvider extends ChangeNotifier {
 
   SkinAnalysisProvider(this._repository);
 
-  static const _pollInterval = Duration(seconds: 2);
-  static const _maxPollCount = 30; // 최대 1분(2초 * 30회)까지만 폴링
+  static const _pollInterval = Duration(seconds: 5);
+  static const _maxPollCount = 20; // 최대 100초(5초 * 20회)까지만 폴링
 
   SkinAnalysisResponse? _analysis;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _pollingTimedOut = false; // 폴링 시간이 끝났는데도 아직 PENDING인 상태
   Timer? _pollTimer;
   bool _disposed = false;
 
@@ -28,6 +29,7 @@ class SkinAnalysisProvider extends ChangeNotifier {
   SkinAnalysisResponse? get analysis => _analysis;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get pollingTimedOut => _pollingTimedOut;
 
   /// 피부 분석 요청
   Future<void> analyze(int diaryId, XFile imageFile) async {
@@ -100,7 +102,7 @@ class SkinAnalysisProvider extends ChangeNotifier {
 
       if (attempts > _maxPollCount) {
         timer.cancel();
-        _errorMessage = '분석이 지연되고 있습니다. 잠시 후 다시 확인해주세요.';
+        _pollingTimedOut = true; // 화면이 읽을 수 있도록 상태로 남김
         _safeNotify();
         return;
       }
@@ -139,6 +141,7 @@ class SkinAnalysisProvider extends ChangeNotifier {
   void _beginTracking(int? diaryId) {
     _pollTimer?.cancel();
     _pollTimer = null;
+    _pollingTimedOut = false; // 새 분석/다른 날짜/다시 확인 시 초기화
     _activeDiaryId = diaryId;
   }
 

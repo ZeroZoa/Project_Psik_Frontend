@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/network/api_error_handler.dart';
 import '../../data/repositories/skin_diary_repository.dart';
 import '../../data/models/skin_diary_request.dart';
 import '../../data/models/skin_diary_response.dart';
@@ -12,6 +13,10 @@ class SkinDiaryProvider extends ChangeNotifier {
 
   // 현재 화면에서 조회된 다이어리 데이터 (없으면 null)
   SkinDiaryResponse? currentDiary;
+
+  // 조회 실패 메시지. 성공했거나 기록이 정말 없으면(404) null
+  // → currentDiary == null 이어도 "기록 없음"과 "불러오기 실패"를 구분하기 위함
+  String? loadErrorMessage;
 
   //현재 조회한 월에서 기록이 존재하는 날짜(day)들의 Set
   Set<int> recordedDays = {};
@@ -40,6 +45,7 @@ class SkinDiaryProvider extends ChangeNotifier {
   //선택된 날짜의 다이어리 조회 (GET)
   Future<void> fetchDiaryByDate(DateTime date) async {
     isLoading = true;
+    loadErrorMessage = null; // 매 조회마다 초기화
     notifyListeners();
 
     try {
@@ -47,6 +53,7 @@ class SkinDiaryProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("Error fetching diary: $e");
       currentDiary = null;
+      loadErrorMessage = ApiErrorHandler.getMessage(e); // 실패를 "기록 없음"과 구분해서 기록
     } finally {
       isLoading = false;
       notifyListeners();
