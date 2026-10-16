@@ -20,6 +20,11 @@ class AdminProvider extends ChangeNotifier {
   bool isIngredientsLoadingMore = false;
   int _ingredientPage = 0;
   bool isProductsLoading = false;
+  bool hasMoreProducts = false;
+  bool isProductsLoadingMore = false;
+  int _productPage = 0;
+  // 성분에 제품을 연결할 때 고르는 전체 제품 목록 (제품 탭의 페이지 목록과 별개)
+  List<ProductModel> selectableProducts = [];
   String? error;
 
   // ── 성분 목록 로드 (첫 페이지로 초기화) ──
@@ -54,6 +59,7 @@ class AdminProvider extends ChangeNotifier {
       _ingredientPage++;
     } catch (e) {
       error = ApiErrorHandler.getMessage(e);
+      hasMoreIngredients = false; // 실패 시 같은 요청이 계속 반복되지 않도록 멈춘다 (당겨서 새로고침으로 재시도)
     } finally {
       isIngredientsLoadingMore = false;
       notifyListeners();
@@ -132,8 +138,8 @@ class AdminProvider extends ChangeNotifier {
   Future<bool> deleteIngredient(int id) async {
     try {
       await _adminRepository.deleteIngredient(id);
-      ingredients.removeWhere((e) => e.id == id);
-      notifyListeners();
+      // 페이지 단위로 불러오는 목록에서 한 건만 지우면 다음 페이지 경계가 어긋나므로 처음부터 다시 불러온다
+      await loadIngredients();
       return true;
     } catch (e) {
       error = ApiErrorHandler.getMessage(e);
@@ -152,7 +158,7 @@ class AdminProvider extends ChangeNotifier {
     String? imageUrl,
   }) async {
     try {
-      final product = await _adminRepository.createProduct(
+      await _adminRepository.createProduct(
         name: name,
         brand: brand,
         price: price,
@@ -160,8 +166,8 @@ class AdminProvider extends ChangeNotifier {
         link: link,
         imageUrl: imageUrl,
       );
-      products.add(product);
-      notifyListeners();
+      // 새 제품은 마지막 페이지에 들어가므로 첫 페이지부터 다시 불러온다
+      await loadProducts();
       return true;
     } catch (e) {
       error = ApiErrorHandler.getMessage(e);
@@ -190,8 +196,8 @@ class AdminProvider extends ChangeNotifier {
         link: link,
         imageUrl: imageUrl,
       );
-      final index = products.indexWhere((e) => e.id == id);
-      if (index != -1) products[index] = updated;
+      // 새 리스트로 교체해야 화면의 context.select가 변경을 감지한다 (제자리 수정 금지)
+      products = [for (final p in products) p.id == id ? updated : p];
       notifyListeners();
       return true;
     } catch (e) {
@@ -205,8 +211,7 @@ class AdminProvider extends ChangeNotifier {
   Future<bool> deleteProduct(int id) async {
     try {
       await _adminRepository.deleteProduct(id);
-      products.removeWhere((e) => e.id == id);
-      notifyListeners();
+      await loadProducts(); // 페이지 경계가 어긋나지 않도록 처음부터 다시 불러온다
       return true;
     } catch (e) {
       error = ApiErrorHandler.getMessage(e);
@@ -215,18 +220,49 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  // ── 전체 제품 목록 로드 (성분 연결 시 선택용) ──
-  Future<void> loadAllProducts() async {
+  // ── 제품 목록 로드 (제품 탭, 첫 페이지로 초기화) ──
+  Future<void> loadProducts() async {
     isProductsLoading = true;
     error = null;
     notifyListeners();
     try {
-      products = await _adminRepository.getAllProducts();
+      final firstPage = await _adminRepository.getProductsPage();
+      products = firstPage.items;
+      hasMoreProducts = firstPage.hasMore;
+      _productPage = 0;
     } catch (e) {
       error = ApiErrorHandler.getMessage(e);
     } finally {
       isProductsLoading = false;
       notifyListeners();
     }
+  }
+
+  /// 다음 페이지 제품을 이어서 불러온다 (목록 끝 로딩 줄이 보일 때 호출)
+  Future<void> loadMoreProducts() async {
+    if (!hasMoreProducts || isProductsLoadingMore || isProductsLoading) return;
+
+    isProductsLoadingMore = true;
+    notifyListeners();
+    try {
+      final nextPage = await _adminRepository.getProductsPage(page: _productPage + 1);
+      // 새 리스트로 교체해야 화면의 context.select가 변경을 감지한다 (addAll로 제자리 수정 금지)
+      products = [...products, ...nextPage.items];
+      hasMoreProducts = nextPage.hasMore;
+      _productPage++;
+    } catch (e) {
+      error = ApiErrorHandler.getMessage(e);
+      hasMoreProducts = false; // 실패 시 같은 요청이 계속 반복되지 않도록 멈춘다
+    } finally {
+      isProductsLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  // ── 연결용 전체 제품 목록 로드 (성분에 제품을 연결할 때 고르는 목록) ──
+  // 연결 안 된 제품을 전부 보여줘야 해서 페이지네이션하지 않는다. 실패하면 호출한 화면이 처리한다.
+  Future<void> loadSelectableProducts() async {
+    selectableProducts = await _adminRepository.getAllProducts();
+    notifyListeners();
   }
 }

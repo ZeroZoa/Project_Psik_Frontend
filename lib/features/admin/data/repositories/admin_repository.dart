@@ -6,6 +6,9 @@ import 'package:flutter/foundation.dart';
 import '../../../home/data/models/ingredient_detail_model.dart';
 import '../../../home/data/models/product_model.dart';
 
+/// 제품 목록 한 페이지 — hasMore: 다음 페이지가 더 있는지
+typedef ProductPage = ({List<ProductModel> items, bool hasMore});
+
 class AdminRepository {
   final Dio _dio;
 
@@ -132,6 +135,24 @@ class AdminRepository {
     await _dio.delete('/api/admin/products/$id');
   }
 
+  /// 제품 한 페이지 조회 (관리자 제품 탭용)
+  Future<ProductPage> getProductsPage({int page = 0, int size = 20}) async {
+    final response = await _dio.get(
+      '/api/admin/products',
+      queryParameters: {'page': page, 'size': size},
+    );
+    final data = jsonDecode(jsonEncode(response.data));
+    final List<dynamic> content = data['content'];
+    final int totalPages = data['page']['totalPages'] as int;
+    return (
+      items: content
+          .map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hasMore: page + 1 < totalPages,
+    );
+  }
+
+  /// 제품 전체 조회 (성분에 제품을 연결할 때 고르는 목록용 — 백엔드 기본 한도 200개)
   Future<List<ProductModel>> getAllProducts() async {
     final response = await _dio.get('/api/admin/products');
     final List<dynamic> data = jsonDecode(jsonEncode(response.data['content']));

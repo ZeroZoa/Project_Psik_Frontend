@@ -11,7 +11,7 @@ class CosmeticsRepository {
 
   CosmeticsRepository(this._dio);
 
-  Future<IngredientPage> getIngredientsPage({int page = 0, int size = 10}) async {
+  Future<IngredientPage> getIngredientsPage({int page = 0, int size = 20}) async {
     final response = await _dio.get(
       '/api/ingredients',
       queryParameters: {'page': page, 'size': size},
