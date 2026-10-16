@@ -36,6 +36,26 @@ class _HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<_HomeView> {
   bool _isExpanded = true;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    // 목록 끝에 가까워지면 다음 페이지 성분을 불러온다 (접어 둔 상태에서는 불러오지 않음)
+    _scrollController.addListener(() {
+      if (_isExpanded &&
+          _scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200) {
+        context.read<HomeProvider>().loadMoreIngredients();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +86,7 @@ class _HomeViewState extends State<_HomeView> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
 
           RefreshCircleBar(
@@ -207,6 +228,14 @@ class _HomeViewState extends State<_HomeView> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                         (context, index) {
+                      if (index == provider.otherIngredientDetails.length) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: CircularProgressIndicator(color: AppColors.primary),
+                          ),
+                        );
+                      }
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 14),
                         child: IngredientInfoCard(
@@ -214,7 +243,8 @@ class _HomeViewState extends State<_HomeView> {
                         ),
                       );
                     },
-                    childCount: provider.otherIngredientDetails.length,
+                    childCount: provider.otherIngredientDetails.length +
+                        (provider.hasMoreIngredients ? 1 : 0),
                   ),
                 ),
               ),
