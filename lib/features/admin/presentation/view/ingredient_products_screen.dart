@@ -31,7 +31,7 @@ class IngredientProductsScreen extends StatefulWidget {
 /// [IngredientProductsScreen]의 State — 제품 연결/해제 로직 관리
 /// 관리 상태: 성분 상세(_detail), 로딩 여부(_isLoading)
 /// - 연결된 제품: _detail.products (linkedProducts)
-/// - 연결 가능한 제품: adminProvider.products 중 미연결 항목 (unlinkableProducts)
+/// - 연결 가능한 제품: adminProvider.selectableProducts 중 미연결 항목 (unlinkableProducts)
 class _IngredientProductsScreenState
     extends State<IngredientProductsScreen> {
   IngredientDetailModel? _detail;
@@ -44,7 +44,7 @@ class _IngredientProductsScreenState
   }
 
   /// 성분 상세([CosmeticsRepository.getIngredientDetail]) +
-  /// 전체 제품 목록([AdminProvider.loadAllProducts]) 동시 로드
+  /// 연결용 전체 제품 목록([AdminProvider.loadSelectableProducts]) 동시 로드
   Future<void> _load() async {
     setState(() => _isLoading = true);
     try {
@@ -53,7 +53,7 @@ class _IngredientProductsScreenState
 
       final detail =
       await cosmeticsRepo.getIngredientDetail(widget.ingredientId);
-      await adminProvider.loadAllProducts();
+      await adminProvider.loadSelectableProducts();
 
       if (!mounted) return;
       setState(() => _detail = detail);
@@ -117,7 +117,7 @@ class _IngredientProductsScreenState
     final adminProvider = context.watch<AdminProvider>();
     final linkedProducts = _detail?.products ?? [];
     final linkedIds = linkedProducts.map((p) => p.id).toSet();
-    final allProducts = adminProvider.products;
+    final allProducts = adminProvider.selectableProducts;
     final unlinkableProducts =
     allProducts.where((p) => !linkedIds.contains(p.id)).toList();
 

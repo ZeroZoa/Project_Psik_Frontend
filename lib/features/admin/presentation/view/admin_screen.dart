@@ -28,7 +28,7 @@ class AdminScreen extends StatelessWidget {
       create: (_) => AdminProvider(
         context.read<AdminRepository>(),
         context.read<CosmeticsRepository>(),
-      )..loadIngredients()..loadAllProducts(),
+      )..loadIngredients()..loadProducts(),
       child: const _AdminView(),
     );
   }
@@ -112,6 +112,39 @@ class _AdminViewState extends State<_AdminView>
   }
 }
 
+/// 목록 맨 끝에 두는 로딩 줄 (성분·제품·문의 탭 공통)
+/// 화면에 나타나는 순간 [onVisible]을 한 번 호출해 다음 페이지를 불러온다.
+/// 스크롤 위치를 감지하는 방식과 달리, 한 페이지가 화면보다 짧아도 끝까지 자동으로 이어 불러온다.
+class _PageLoader extends StatefulWidget {
+  final VoidCallback onVisible;
+
+  const _PageLoader({required this.onVisible});
+
+  @override
+  State<_PageLoader> createState() => _PageLoaderState();
+}
+
+class _PageLoaderState extends State<_PageLoader> {
+  @override
+  void initState() {
+    super.initState();
+    // 빌드 도중 상태를 바꾸지 않도록 현재 프레임이 끝난 뒤 호출한다
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onVisible();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.all(16),
+      child: Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+  }
+}
+
 /// 성분 탭
 /// [_AdminView] 탭 0 — 성분 목록 + 추가 FAB
 /// - 목록 아이템: [_IngredientTile]
@@ -163,31 +196,18 @@ class _IngredientTab extends StatelessWidget {
           : RefreshIndicator(
         onRefresh: () => context.read<AdminProvider>().loadIngredients(),
         color: AppColors.primary,
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (n) {
-            // 목록 끝에 가까워지면 다음 페이지를 불러온다
-            if (n.depth == 0 &&
-                n.metrics.pixels >= n.metrics.maxScrollExtent - 200) {
-              context.read<AdminProvider>().loadMoreIngredients();
+        child: ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: ingredients.length + (hasMore ? 1 : 0),
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          itemBuilder: (context, index) {
+            if (index == ingredients.length) {
+              return _PageLoader(
+                onVisible: () => context.read<AdminProvider>().loadMoreIngredients(),
+              );
             }
-            return false;
+            return _IngredientTile(ingredient: ingredients[index]);
           },
-          child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: ingredients.length + (hasMore ? 1 : 0),
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              if (index == ingredients.length) {
-                return const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
-                );
-              }
-              return _IngredientTile(ingredient: ingredients[index]);
-            },
-          ),
         ),
       ),
     );
@@ -314,11 +334,11 @@ class _ProductTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 이 탭이 실제로 쓰는 필드(products, isProductsLoading)만 select —
+    // 이 탭이 실제로 쓰는 필드(products, isProductsLoading, hasMoreProducts)만 select —
     // 성분 탭 쪽 상태(ingredients 등)가 바뀌어도 이 탭은 리빌드되지 않는다.
-    final (products, isLoading) = context
-        .select<AdminProvider, (List<ProductModel>, bool)>(
-            (p) => (p.products, p.isProductsLoading));
+    final (products, isLoading, hasMore) = context
+        .select<AdminProvider, (List<ProductModel>, bool, bool)>(
+            (p) => (p.products, p.isProductsLoading, p.hasMoreProducts));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -355,9 +375,14 @@ class _ProductTab extends StatelessWidget {
       )
           : ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: products.length,
+        itemCount: products.length + (hasMore ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
+          if (index == products.length) {
+            return _PageLoader(
+              onVisible: () => context.read<AdminProvider>().loadMoreProducts(),
+            );
+          }
           return _ProductTile(product: products[index]);
         },
       ),
@@ -469,6 +494,9 @@ class _InquiryTab extends StatefulWidget {
 class _InquiryTabState extends State<_InquiryTab> {
   List<InquiryModel> _inquiries = [];
   bool _isLoading = false;
+  bool _hasMore = false;
+  bool _isLoadingMore = false;
+  int _page = 0;
 
   @override
   void initState() {
@@ -476,11 +504,14 @@ class _InquiryTabState extends State<_InquiryTab> {
     _loadInquiries();
   }
 
+  /// 첫 페이지로 초기화해서 불러온다
   Future<void> _loadInquiries() async {
     setState(() => _isLoading = true);
     try {
-      _inquiries =
-      await context.read<InquiryRepository>().getAllInquiries();
+      final firstPage = await context.read<InquiryRepository>().getAllInquiries();
+      _inquiries = firstPage.items;
+      _hasMore = firstPage.hasMore;
+      _page = 0;
     } catch (e) {
       debugPrint('문의 목록 조회 실패: $e');
       if (mounted) {
@@ -490,6 +521,33 @@ class _InquiryTabState extends State<_InquiryTab> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// 다음 페이지 문의를 이어서 불러온다 (목록 끝 로딩 줄이 보일 때 호출)
+  Future<void> _loadMoreInquiries() async {
+    if (!_hasMore || _isLoadingMore || _isLoading) return;
+
+    _isLoadingMore = true;
+    final repository = context.read<InquiryRepository>();
+    try {
+      final nextPage = await repository.getAllInquiries(page: _page + 1);
+      if (!mounted) return;
+      setState(() {
+        _inquiries = [..._inquiries, ...nextPage.items];
+        _hasMore = nextPage.hasMore;
+        _page++;
+      });
+    } catch (e) {
+      debugPrint('문의 목록 추가 조회 실패: $e');
+      if (!mounted) return;
+      // 실패 시 같은 요청이 계속 반복되지 않도록 멈춘다 (당겨서 새로고침으로 재시도)
+      setState(() => _hasMore = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('문의 목록을 더 불러오지 못했습니다: ${ApiErrorHandler.getMessage(e)}')),
+      );
+    } finally {
+      _isLoadingMore = false;
     }
   }
 
@@ -520,9 +578,12 @@ class _InquiryTabState extends State<_InquiryTab> {
       color: AppColors.primary,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: _inquiries.length,
+        itemCount: _inquiries.length + (_hasMore ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
+          if (index == _inquiries.length) {
+            return _PageLoader(onVisible: _loadMoreInquiries);
+          }
           final inquiry = _inquiries[index];
           return GestureDetector(
             onTap: () async {
