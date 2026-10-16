@@ -16,20 +16,46 @@ class AdminProvider extends ChangeNotifier {
   List<IngredientDetailModel> ingredients = [];
   List<ProductModel> products = [];
   bool isIngredientsLoading = false;
+  bool hasMoreIngredients = false;
+  bool isIngredientsLoadingMore = false;
+  int _ingredientPage = 0;
   bool isProductsLoading = false;
   String? error;
 
-  // ── 성분 목록 로드 ──
+  // ── 성분 목록 로드 (첫 페이지로 초기화) ──
   Future<void> loadIngredients() async {
     isIngredientsLoading = true;
     error = null;
     notifyListeners();
     try {
-      ingredients = await _cosmeticsRepository.getIngredients();
+      final firstPage = await _cosmeticsRepository.getIngredientsPage();
+      ingredients = firstPage.items;
+      hasMoreIngredients = firstPage.hasMore;
+      _ingredientPage = 0;
     } catch (e) {
       error = ApiErrorHandler.getMessage(e);
     } finally {
       isIngredientsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// 다음 페이지 성분을 이어서 불러온다 (목록 끝에 가까워졌을 때 호출)
+  Future<void> loadMoreIngredients() async {
+    if (!hasMoreIngredients || isIngredientsLoadingMore || isIngredientsLoading) return;
+
+    isIngredientsLoadingMore = true;
+    notifyListeners();
+    try {
+      final nextPage = await _cosmeticsRepository.getIngredientsPage(page: _ingredientPage + 1);
+      // 새 리스트로 교체해야 화면의 context.select가 변경을 감지한다 (addAll로 제자리 수정 금지)
+      ingredients = [...ingredients, ...nextPage.items];
+      hasMoreIngredients = nextPage.hasMore;
+      _ingredientPage++;
+    } catch (e) {
+      error = ApiErrorHandler.getMessage(e);
+    } finally {
+      isIngredientsLoadingMore = false;
       notifyListeners();
     }
   }

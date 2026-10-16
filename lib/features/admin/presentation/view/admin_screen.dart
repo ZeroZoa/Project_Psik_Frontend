@@ -121,11 +121,11 @@ class _IngredientTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 이 탭이 실제로 쓰는 필드(ingredients, isIngredientsLoading)만 select —
+    // 이 탭이 실제로 쓰는 필드(ingredients, isIngredientsLoading, hasMoreIngredients)만 select —
     // 제품 탭 쪽 상태(products 등)가 바뀌어도 이 탭은 리빌드되지 않는다.
-    final (ingredients, isLoading) = context.select<AdminProvider,
-        (List<IngredientDetailModel>, bool)>(
-            (p) => (p.ingredients, p.isIngredientsLoading));
+    final (ingredients, isLoading, hasMore) = context.select<AdminProvider,
+        (List<IngredientDetailModel>, bool, bool)>(
+            (p) => (p.ingredients, p.isIngredientsLoading, p.hasMoreIngredients));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -163,13 +163,31 @@ class _IngredientTab extends StatelessWidget {
           : RefreshIndicator(
         onRefresh: () => context.read<AdminProvider>().loadIngredients(),
         color: AppColors.primary,
-        child: ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: ingredients.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (context, index) {
-            return _IngredientTile(ingredient: ingredients[index]);
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            // 목록 끝에 가까워지면 다음 페이지를 불러온다
+            if (n.depth == 0 &&
+                n.metrics.pixels >= n.metrics.maxScrollExtent - 200) {
+              context.read<AdminProvider>().loadMoreIngredients();
+            }
+            return false;
           },
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: ingredients.length + (hasMore ? 1 : 0),
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              if (index == ingredients.length) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                );
+              }
+              return _IngredientTile(ingredient: ingredients[index]);
+            },
+          ),
         ),
       ),
     );
