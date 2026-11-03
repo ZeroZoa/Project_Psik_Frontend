@@ -130,7 +130,8 @@ class AppRouter {
         }
 
         // admin이 아니라면 /admin 접근 차단
-        if (location == '/admin' && !authProvider.isAdmin) {
+        // 부팅 시 로그인 확인 전에는 판단을 미룬다 (끝나면 refreshListenable로 redirect가 다시 돈다)
+        if (location == '/admin' && authProvider.authCheckComplete && !authProvider.isAdmin) {
           return '/home';
         }
 

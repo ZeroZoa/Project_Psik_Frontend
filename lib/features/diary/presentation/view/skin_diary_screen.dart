@@ -44,12 +44,12 @@ class _SkinDiaryScreenState extends State<SkinDiaryScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final isAuthenticated = context.read<AuthProvider>().isAuthenticated;
-      if (isAuthenticated) {
-        _loadDiaryForDate(_selectedDate);
-        _loadMonthlyRecords(_selectedDate);
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final authProvider = context.read<AuthProvider>();
+      await authProvider.authReady;
+      if (!mounted || !authProvider.isAuthenticated) return;
+      _loadDiaryForDate(_selectedDate);
+      _loadMonthlyRecords(_selectedDate);
     });
   }
 

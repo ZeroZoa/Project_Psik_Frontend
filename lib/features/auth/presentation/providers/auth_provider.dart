@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -36,9 +37,14 @@ class AuthProvider extends ChangeNotifier {
   bool _profileComplete = false;
   bool get profileComplete => _profileComplete;
 
-  // 앱 부팅 시 최초 로그인 상태 확인이 끝났는지 여부 — SplashScreen을 얼마나 보여줄지 결정
+  // 앱 부팅 시 최초 로그인 상태 확인이 끝났는지 여부
   bool _authCheckComplete = false;
   bool get authCheckComplete => _authCheckComplete;
+
+  // 부팅 시 로그인 확인이 끝나면 완료된다. 로그인 여부로 첫 데이터를 불러오는 화면은
+  // 이걸 기다린 뒤 isAuthenticated를 본다 (새로고침 직후엔 아직 false라서).
+  final Completer<void> _authReady = Completer<void>();
+  Future<void> get authReady => _authReady.future;
 
   Dio? _dio;
   AuthInterceptor? _authInterceptor;
@@ -80,6 +86,7 @@ class AuthProvider extends ChangeNotifier {
       _resetState();
     } finally {
       _authCheckComplete = true;
+      if (!_authReady.isCompleted) _authReady.complete();
       notifyListeners();
     }
   }

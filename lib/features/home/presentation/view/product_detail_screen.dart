@@ -79,8 +79,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   /// 샀어요 여부 + 총 카운트 조회 — [MemberProductRepository.getOwnedStatus] 호출
   /// 비로그인 시 조기 반환 (초기값 false/product.ownedCount 유지)
   Future<void> _fetchOwnedStatus() async {
-    final isAuthenticated = context.read<AuthProvider>().isAuthenticated;
-    if (!isAuthenticated) return;
+    final authProvider = context.read<AuthProvider>();
+    await authProvider.authReady;
+    if (!mounted || !authProvider.isAuthenticated) return;
 
     try {
       final repo = context.read<MemberProductRepository>();

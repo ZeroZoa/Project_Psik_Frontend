@@ -31,7 +31,7 @@ lib/
 │   └── widgets/
 └── features/
     ├── admin, auth, chat, community, diary,
-    │   home, mypage, search, splash
+    │   home, mypage, search
     └── (각 feature: data/{models,repositories,services} + presentation/{providers,view,widgets})
 ```
 
