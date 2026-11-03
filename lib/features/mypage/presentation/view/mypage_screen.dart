@@ -42,14 +42,14 @@ class _MypageScreenState extends State<MypageScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final isAuthenticated = context.read<AuthProvider>().isAuthenticated;
-      if (isAuthenticated) {
-        final provider = context.read<MypageProvider>();
-        provider.fetchMyInfo();
-        provider.fetchMyPosts();
-        provider.fetchRecentDiaries();
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final authProvider = context.read<AuthProvider>();
+      await authProvider.authReady;
+      if (!mounted || !authProvider.isAuthenticated) return;
+      final provider = context.read<MypageProvider>();
+      provider.fetchMyInfo();
+      provider.fetchMyPosts();
+      provider.fetchRecentDiaries();
     });
   }
 
