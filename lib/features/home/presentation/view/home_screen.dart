@@ -18,10 +18,14 @@ class HomeScreen extends StatelessWidget {
     final authProvider = context.read<AuthProvider>();
 
     return ChangeNotifierProvider(
-      create: (_) => HomeProvider(
-        repository,
-        userSkinConcerns: authProvider.skinConcerns,
-      )..init(),
+      create: (_) {
+        final provider = HomeProvider(repository, userSkinConcerns: const []);
+        // 부팅 시 로그인 확인이 끝난 뒤의 피부 고민으로 불러온다 (새로고침 직후엔 아직 비어 있어서)
+        authProvider.authReady.then(
+          (_) => provider.init(updatedConcerns: authProvider.skinConcerns),
+        );
+        return provider;
+      },
       child: const _HomeView(),
     );
   }
